@@ -58,6 +58,119 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     expect(await page.evaluate(() => (window as any).office.desktop)).toBe(
       true,
     );
+    await page
+      .getByRole("button", { name: "Fullscreen note", exact: true })
+      .click();
+    await expect(page.locator(".doc-editor.editor-fullscreen")).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.fullscreenElement?.classList.contains("fullscreen-host"),
+        ),
+      )
+      .toBe(true);
+    await page.screenshot({ path: "test-results/electron-fullscreen.png" });
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".editor-fullscreen")).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.fullscreenElement === null))
+      .toBe(true);
+    await expect(
+      page.getByRole("button", { name: /Go to canvas block/ }),
+    ).toBeVisible();
+    // Entering element focus from an already-fullscreen native window must
+    // also exit cleanly, without waiting for an event that will not occur.
+    await app.evaluate(async ({ BrowserWindow }) => {
+      const win = BrowserWindow.getAllWindows()[0];
+      if (!win.isFullScreen())
+        await new Promise<void>((resolve) => {
+          win.once("enter-full-screen", () => resolve());
+          win.setFullScreen(true);
+        });
+    });
+    await page
+      .getByRole("button", { name: "Fullscreen note", exact: true })
+      .click();
+    await expect(page.locator(".editor-fullscreen")).toHaveCount(1);
+    await page
+      .getByRole("button", { name: "Exit fullscreen", exact: true })
+      .click();
+    await expect(page.locator(".editor-fullscreen")).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.fullscreenElement === null))
+      .toBe(true);
+    // Keep the same native fullscreen host while the map changes the focused
+    // editor; no additional macOS Space transition should happen.
+    await page.evaluate(() => {
+      (window as any).nativeEntry = new Promise<void>((resolve) => {
+        const entered = () => {
+          if (
+            document.fullscreenElement?.classList.contains("fullscreen-host")
+          ) {
+            document.removeEventListener("fullscreenchange", entered);
+            resolve();
+          }
+        };
+        document.addEventListener("fullscreenchange", entered);
+      });
+    });
+    await page
+      .getByRole("button", { name: "Fullscreen note", exact: true })
+      .click();
+    await page.evaluate(() => (window as any).nativeEntry);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.fullscreenElement?.classList.contains("fullscreen-host"),
+        ),
+      )
+      .toBe(true);
+    await page.evaluate(() => {
+      (window as any).nativeHost = document.fullscreenElement;
+      (window as any).nativeChanges = 0;
+      document.addEventListener(
+        "fullscreenchange",
+        () => (window as any).nativeChanges++,
+      );
+    });
+    await page
+      .getByRole("button", { name: "Expand fullscreen map", exact: true })
+      .hover();
+    const map = page.getByRole("complementary", {
+      name: "Fullscreen document minimap",
+      exact: true,
+    });
+    await map.getByRole("button", { name: /Go to canvas block/ }).click();
+    await expect(
+      page.locator(".canvas-editor.editor-fullscreen"),
+    ).toBeVisible();
+    await page.locator(".fullscreen-navigator").hover();
+    await map.getByRole("button", { name: /Go to slides block/ }).click();
+    await expect(
+      page.locator(".slides-editor.editor-fullscreen"),
+    ).toBeVisible();
+    await page.locator(".fullscreen-navigator").hover();
+    await map
+      .getByRole("button", { name: "Map: slide 2", exact: true })
+      .click();
+    await expect(page.locator(".slide-card").nth(1)).toHaveClass(/current/);
+    await expect(
+      map.getByRole("button", { name: "Map: slide 2", exact: true }),
+    ).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.fullscreenElement === (window as any).nativeHost,
+      ),
+    ).toBe(true);
+    expect(await page.evaluate(() => (window as any).nativeChanges)).toBe(0);
+    await page.screenshot({ path: "test-results/electron-fullscreen-map.png" });
+    await page
+      .getByRole("button", { name: "Exit fullscreen", exact: true })
+      .click();
+    await expect(page.locator(".editor-fullscreen")).toHaveCount(0);
+    await expect
+      .poll(() => page.evaluate(() => document.fullscreenElement === null))
+      .toBe(true);
     await page.screenshot({ path: "test-results/electron.png" });
   } finally {
     await app.close();
@@ -121,9 +234,11 @@ test("rich text, canvas, and slide content survive a Go server restart", async (
     await page
       .getByLabel("Document text", { exact: true })
       .pressSequentially("Persisted across a restart.");
+    await page.getByRole("button", { name: /Go to canvas block/ }).click();
     await page
       .locator(".block-canvas input.block-title")
       .fill("Durable drawing");
+    await page.getByRole("button", { name: /Go to slides block/ }).click();
     await page
       .getByLabel("Slide title", { exact: true })
       .first()

@@ -30,6 +30,7 @@ import type { DocumentSession } from "@office/collaboration";
 import { useShared, useSession } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
 import { Modal } from "../shared/Modal";
+import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 type Tool = "select" | "hand" | ShapeKind;
 const palette = [
   "#3e4147",
@@ -141,6 +142,9 @@ export function CanvasEditor({
   compact?: boolean;
   readOnly?: boolean;
 }) {
+  const fullscreen = useEditorFullscreen(
+    `${compact ? "slide" : "block"}:${scope}${compact ? ":canvas" : ""}`,
+  );
   useShared(shapes);
   useSession(session);
   const svg = useRef<SVGSVGElement>(null);
@@ -171,6 +175,32 @@ export function CanvasEditor({
       undo.current?.destroy();
     };
   }, [shapes]);
+  useEffect(() => {
+    const element = svg.current;
+    if (!element) return;
+    const wheel = (event: WheelEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.ctrlKey || event.metaKey) zoom(event.deltaY > 0 ? 1.06 : 0.94);
+      else {
+        const unit =
+          event.deltaMode === 1
+            ? 16
+            : event.deltaMode === 2
+              ? element.clientHeight
+              : 1;
+        const scale = element.getScreenCTM()?.a || 1;
+        setView((v) => ({
+          ...v,
+          x: v.x + (event.deltaX * unit) / scale,
+          y: v.y + (event.deltaY * unit) / scale,
+        }));
+      }
+    };
+    // React wheel listeners are passive; a native listener owns the gesture.
+    element.addEventListener("wheel", wheel, { passive: false });
+    return () => element.removeEventListener("wheel", wheel);
+  }, []);
   function point(event: { clientX: number; clientY: number }) {
     const element = svg.current!;
     const p = element.createSVGPoint();
@@ -302,9 +332,19 @@ export function CanvasEditor({
       id !== session.doc.clientID && state.canvas?.scope === scope,
   );
   return (
-    <div className={`canvas-editor ${compact ? "compact" : ""}`}>
+    <div
+      ref={fullscreen.ref}
+      className={`canvas-editor ${compact ? "compact" : ""} ${fullscreen.className}`}
+    >
       {!readOnly && (
-        <div className="editor-tools canvas-tools" aria-label="Canvas tools">
+        <EditorTools
+          className="canvas-tools"
+          label="Canvas tools"
+          fullscreen={fullscreen}
+          fullscreenLabel={
+            compact ? "Fullscreen slide canvas" : "Fullscreen canvas"
+          }
+        >
           {(
             [
               { id: "select", label: "Select (V)", icon: MousePointer2 },
@@ -384,7 +424,7 @@ export function CanvasEditor({
           <ToolButton label="Download canvas" onClick={download}>
             <Download size={17} />
           </ToolButton>
-        </div>
+        </EditorTools>
       )}
       <div className="canvas-workspace">
         <svg
@@ -413,17 +453,6 @@ export function CanvasEditor({
                 value: shape.text ?? "",
                 id: shape.id,
               });
-          }}
-          onWheel={(e) => {
-            if (e.ctrlKey || e.metaKey) {
-              e.preventDefault();
-              zoom(e.deltaY > 0 ? 1.06 : 0.94);
-            } else
-              setView((v) => ({
-                ...v,
-                x: v.x + (e.deltaX * v.w) / 1200,
-                y: v.y + (e.deltaY * v.h) / 650,
-              }));
           }}
           onKeyDown={(e) => {
             if (readOnly) return;

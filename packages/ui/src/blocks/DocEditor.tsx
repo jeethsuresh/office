@@ -25,6 +25,7 @@ import type * as Y from "yjs";
 import type { DocumentSession } from "@office/collaboration";
 import { ToolButton } from "../shared/Toolbar";
 import { Modal } from "../shared/Modal";
+import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 export function DocEditor({
   fragment,
   session,
@@ -36,6 +37,13 @@ export function DocEditor({
   compact?: boolean;
   readOnly?: boolean;
 }) {
+  const ownerID = (fragment.parent as Y.Map<unknown> | null)?.get("id") as
+    string | undefined;
+  const fullscreen = useEditorFullscreen(
+    ownerID
+      ? `${compact ? "slide" : "block"}:${ownerID}${compact ? ":doc" : ""}`
+      : undefined,
+  );
   const [markdown, setMarkdown] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const user = session.awareness.getLocalState()?.user;
@@ -96,10 +104,18 @@ export function DocEditor({
   }
   return (
     <div
-      className={`doc-editor ${compact ? "compact" : ""} ${readOnly ? "readonly" : ""}`}
+      ref={fullscreen.ref}
+      className={`doc-editor ${compact ? "compact" : ""} ${readOnly ? "readonly" : ""} ${fullscreen.className}`}
     >
       {!readOnly && (
-        <div className="editor-tools doc-tools" aria-label="Writing tools">
+        <EditorTools
+          className="doc-tools"
+          label="Writing tools"
+          fullscreen={fullscreen}
+          fullscreenLabel={
+            compact ? "Fullscreen slide note" : "Fullscreen note"
+          }
+        >
           <ToolButton
             label="Paragraph"
             active={editor.isActive("paragraph")}
@@ -192,7 +208,7 @@ export function DocEditor({
           <ToolButton label="Download Markdown" onClick={download}>
             <Download size={17} />
           </ToolButton>
-        </div>
+        </EditorTools>
       )}
       <div className="doc-paper">
         <EditorContent editor={editor} />

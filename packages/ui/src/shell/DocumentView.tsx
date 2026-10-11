@@ -27,6 +27,7 @@ import { DocEditor } from "../blocks/DocEditor";
 import { CanvasEditor } from "../blocks/CanvasEditor";
 import { SlidesEditor } from "../blocks/SlidesEditor";
 import { Minimap } from "./Minimap";
+import { EditorFullscreenProvider } from "../shared/Fullscreen";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout };
 function Peek({
   block,
@@ -136,8 +137,8 @@ function Peek({
 export function DocumentView({ session }: { session: DocumentSession }) {
   const shared = useShared(getBlocks(session.doc));
   const list = shared.toArray();
+  const blockIDs = list.map((block) => block.get("id")).join(",");
   const state = useSession(session);
-  const viewport = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState("");
   const [activeSlides, setActiveSlides] = useState<Record<string, string>>({});
   const [request, setRequest] = useState<{
@@ -155,22 +156,19 @@ export function DocumentView({ session }: { session: DocumentSession }) {
   function navigate(id: string, slide?: string) {
     setActive(id);
     session.setActiveBlock(id);
-    if (slide) setRequest({ block: id, slide, token: performance.now() });
-    const el = viewport.current?.querySelector<HTMLElement>(
-      `[data-block-id="${id}"]`,
-    );
-    if (el)
-      viewport.current?.scrollTo({
-        top: el.offsetTop - 12,
-        behavior: "smooth",
-      });
+    if (slide) {
+      setActiveSlides((previous) =>
+        previous[id] === slide ? previous : { ...previous, [id]: slide },
+      );
+      setRequest({ block: id, slide, token: performance.now() });
+    }
   }
   useEffect(() => {
     if (!list.some((b) => b.get("id") === active) && list.length) {
       setActive(list[0].get("id"));
       session.setActiveBlock(list[0].get("id"));
     }
-  }, [list.length, active]);
+  }, [blockIDs, active]);
   if (!state.hydrated)
     return (
       <div className="loading-document">
@@ -179,236 +177,223 @@ export function DocumentView({ session }: { session: DocumentSession }) {
       </div>
     );
   return (
-    <div className="document-view">
-      <div
-        ref={viewport}
-        className="block-viewport"
-        onScroll={() => {
-          const el = viewport.current;
-          if (!el) return;
-          const sections = Array.from(
-            el.querySelectorAll<HTMLElement>("[data-block-id]"),
-          );
-          let id = "",
-            distance = Infinity;
-          sections.forEach((s) => {
-            const d = Math.abs(s.offsetTop - el.scrollTop - 12);
-            if (d < distance) {
-              distance = d;
-              id = s.dataset.blockId ?? "";
-            }
-          });
-          if (id && id !== active) {
-            setActive(id);
-            session.setActiveBlock(id);
-          }
-        }}
-      >
-        {!list.length && (
-          <div className="empty-document">
-            <div className="empty-art">
-              <FileText />
-              <PenTool />
-              <Layout />
+    <EditorFullscreenProvider
+      navigation={{ blocks: list, active, activeSlides, onNavigate: navigate }}
+    >
+      <div className="document-view">
+        <div className="block-viewport">
+          {!list.length && (
+            <div className="empty-document">
+              <div className="empty-art">
+                <FileText />
+                <PenTool />
+                <Layout />
+              </div>
+              <span className="eyebrow">
+                A BLANK PAGE. A WORLD OF POSSIBILITY.
+              </span>
+              <h1>
+                Where will your
+                <br />
+                thinking take you?
+              </h1>
+              <p>
+                A note to start. A canvas to explore.
+                <br />A story to bring it all together.
+              </p>
+              <button className="primary-button" onClick={() => setInsert(0)}>
+                <Plus size={18} />
+                Add your first block
+              </button>
             </div>
-            <span className="eyebrow">
-              A BLANK PAGE. A WORLD OF POSSIBILITY.
-            </span>
-            <h1>
-              Where will your
-              <br />
-              thinking take you?
-            </h1>
-            <p>
-              A note to start. A canvas to explore.
-              <br />A story to bring it all together.
-            </p>
-            <button className="primary-button" onClick={() => setInsert(0)}>
-              <Plus size={18} />
-              Add your first block
-            </button>
-          </div>
-        )}
-        {list.map((block, index) => {
-          const id = block.get("id");
-          const kind = block.get("kind") as BlockKind;
-          const Icon = icons[kind] ?? FileText;
-          return (
-            <section
-              key={id}
-              data-block-id={id}
-              className={`office-block block-${kind} ${active === id ? "is-active" : ""}`}
-              style={
-                {
-                  "--block-color": BLOCK_META[kind]?.color,
-                } as React.CSSProperties
-              }
-            >
-              <Peek
-                block={list[index - 1]}
-                direction="previous"
-                onClick={() => navigate(list[index - 1].get("id"))}
-                onAdd={() => setInsert(0)}
-              />
-              <div className="block-heading">
-                <span className="block-type">
-                  <Icon size={15} />
-                  {BLOCK_META[kind]?.name}
-                </span>
-                <span className="block-sequence">
-                  {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
-                  {String(list.length).padStart(2, "0")}
-                </span>
-                <input
-                  className="block-title"
-                  aria-label={`${BLOCK_META[kind]?.name} block title`}
-                  value={block.get("title") ?? ""}
-                  onChange={(e) => block.set("title", e.target.value)}
+          )}
+          {list.map((block, index) => {
+            const id = block.get("id");
+            const kind = block.get("kind") as BlockKind;
+            const Icon = icons[kind] ?? FileText;
+            return (
+              <section
+                key={id}
+                data-block-id={id}
+                hidden={active !== id}
+                inert={active !== id}
+                className={`office-block block-${kind} ${active === id ? "is-active" : ""}`}
+                style={
+                  {
+                    "--block-color": BLOCK_META[kind]?.color,
+                  } as React.CSSProperties
+                }
+              >
+                <Peek
+                  block={list[index - 1]}
+                  direction="previous"
+                  onClick={() => navigate(list[index - 1].get("id"))}
+                  onAdd={() => setInsert(0)}
                 />
-                <button
-                  className="icon-button insert-block"
-                  aria-label={`Insert block after ${index + 1}`}
-                  title="Insert a block here"
-                  onClick={() => setInsert(index + 1)}
-                >
-                  <Plus size={16} />
-                </button>
-                <button
-                  className="icon-button"
-                  aria-label={`Delete block ${index + 1}`}
-                  title="Delete this block"
-                  onClick={() => setDeleteID(id)}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-              <div className="block-body">
-                {kind === "doc" ? (
-                  <DocEditor
-                    fragment={block.get("content")}
-                    session={session}
+                <div className="block-heading">
+                  <span className="block-type">
+                    <Icon size={15} />
+                    {BLOCK_META[kind]?.name}
+                  </span>
+                  <span className="block-sequence">
+                    {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
+                    {String(list.length).padStart(2, "0")}
+                  </span>
+                  <input
+                    className="block-title"
+                    aria-label={`${BLOCK_META[kind]?.name} block title`}
+                    value={block.get("title") ?? ""}
+                    onChange={(e) => block.set("title", e.target.value)}
                   />
-                ) : kind === "canvas" ? (
-                  <CanvasEditor
-                    shapes={block.get("shapes")}
-                    scope={id}
-                    session={session}
-                  />
-                ) : kind === "slides" ? (
-                  <SlidesEditor
-                    block={block}
-                    session={session}
-                    onActiveSlide={(slide) =>
-                      setActiveSlides((prev) =>
-                        prev[id] === slide ? prev : { ...prev, [id]: slide },
-                      )
+                  <button
+                    className="icon-button insert-block"
+                    aria-label={`Insert block after ${index + 1}`}
+                    title="Insert a block here"
+                    onClick={() => setInsert(index + 1)}
+                  >
+                    <Plus size={16} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    aria-label={`Delete block ${index + 1}`}
+                    title="Delete this block"
+                    onClick={() => setDeleteID(id)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="block-body">
+                  {kind === "doc" ? (
+                    <DocEditor
+                      fragment={block.get("content")}
+                      session={session}
+                    />
+                  ) : kind === "canvas" ? (
+                    <CanvasEditor
+                      shapes={block.get("shapes")}
+                      scope={id}
+                      session={session}
+                    />
+                  ) : kind === "slides" ? (
+                    <SlidesEditor
+                      block={block}
+                      session={session}
+                      onActiveSlide={(slide) =>
+                        setActiveSlides((prev) =>
+                          prev[id] === slide ? prev : { ...prev, [id]: slide },
+                        )
+                      }
+                      requestedSlide={
+                        request && request.block === id
+                          ? request.slide
+                          : undefined
+                      }
+                      requestToken={request?.token}
+                    />
+                  ) : (
+                    <p>This block type is not registered.</p>
+                  )}
+                </div>
+                <Peek
+                  block={list[index + 1]}
+                  direction="next"
+                  onClick={() => navigate(list[index + 1].get("id"))}
+                  onAdd={() => setInsert(list.length)}
+                />
+              </section>
+            );
+          })}
+          {list.length > 0 && (
+            <div className="document-end">
+              <span>A little more room to think.</span>
+              <button
+                className="text-button"
+                onClick={() => {
+                  undo.current?.undo();
+                }}
+              >
+                <Undo2 size={14} />
+                Undo block change
+              </button>
+            </div>
+          )}
+        </div>
+        <Minimap
+          blocks={list}
+          active={active}
+          activeSlides={activeSlides}
+          onNavigate={navigate}
+          onAdd={() => setInsert(list.length)}
+        />
+        {insert !== null && (
+          <Modal
+            title="What comes next?"
+            onClose={() => setInsert(null)}
+            className="add-block-modal"
+          >
+            <p className="muted">
+              Three ways to think. One connected document.
+            </p>
+            <div className="block-choices">
+              {(Object.keys(BLOCK_META) as BlockKind[]).map((kind) => {
+                const meta = BLOCK_META[kind];
+                const Icon = icons[kind];
+                return (
+                  <button
+                    key={kind}
+                    className="block-choice"
+                    style={
+                      { "--block-color": meta.color } as React.CSSProperties
                     }
-                    requestedSlide={
-                      request && request.block === id
-                        ? request.slide
-                        : undefined
-                    }
-                    requestToken={request?.token}
-                  />
-                ) : (
-                  <p>This block type is not registered.</p>
-                )}
-              </div>
-              <Peek
-                block={list[index + 1]}
-                direction="next"
-                onClick={() => navigate(list[index + 1].get("id"))}
-                onAdd={() => setInsert(list.length)}
-              />
-            </section>
-          );
-        })}
-        {list.length > 0 && (
-          <div className="document-end">
-            <span>A little more room to think.</span>
-            <button
-              className="text-button"
-              onClick={() => {
-                undo.current?.undo();
-              }}
-            >
-              <Undo2 size={14} />
-              Undo block change
-            </button>
-          </div>
+                    onClick={() => {
+                      undo.current?.stopCapturing();
+                      const block = addBlock(session.doc, kind, insert);
+                      setInsert(null);
+                      setTimeout(() => navigate(block.get("id")), 50);
+                    }}
+                  >
+                    <span className="choice-icon">
+                      <Icon size={24} />
+                    </span>
+                    <strong>{meta.name}</strong>
+                    <span>{meta.description}</span>
+                    <Plus size={17} />
+                  </button>
+                );
+              })}
+            </div>
+            <p className="modal-footnote">
+              Add them in any order. Make it your own.
+            </p>
+          </Modal>
+        )}
+        {deleteID && (
+          <Modal title="Delete this block?" onClose={() => setDeleteID(null)}>
+            <p className="muted">
+              This removes the block and its content from the document. You can
+              undo the change below the last block.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="secondary-button"
+                onClick={() => setDeleteID(null)}
+              >
+                Keep it
+              </button>
+              <button
+                className="danger-button"
+                onClick={() => {
+                  undo.current?.stopCapturing();
+                  removeBlock(session.doc, deleteID);
+                  setDeleteID(null);
+                }}
+              >
+                Delete block
+              </button>
+            </div>
+          </Modal>
         )}
       </div>
-      <Minimap
-        blocks={list}
-        active={active}
-        activeSlides={activeSlides}
-        onNavigate={navigate}
-        onAdd={() => setInsert(list.length)}
-      />
-      {insert !== null && (
-        <Modal
-          title="What comes next?"
-          onClose={() => setInsert(null)}
-          className="add-block-modal"
-        >
-          <p className="muted">Three ways to think. One connected document.</p>
-          <div className="block-choices">
-            {(Object.keys(BLOCK_META) as BlockKind[]).map((kind) => {
-              const meta = BLOCK_META[kind];
-              const Icon = icons[kind];
-              return (
-                <button
-                  key={kind}
-                  className="block-choice"
-                  style={{ "--block-color": meta.color } as React.CSSProperties}
-                  onClick={() => {
-                    undo.current?.stopCapturing();
-                    const block = addBlock(session.doc, kind, insert);
-                    setInsert(null);
-                    setTimeout(() => navigate(block.get("id")), 50);
-                  }}
-                >
-                  <span className="choice-icon">
-                    <Icon size={24} />
-                  </span>
-                  <strong>{meta.name}</strong>
-                  <span>{meta.description}</span>
-                  <Plus size={17} />
-                </button>
-              );
-            })}
-          </div>
-          <p className="modal-footnote">
-            Add them in any order. Make it your own.
-          </p>
-        </Modal>
-      )}
-      {deleteID && (
-        <Modal title="Delete this block?" onClose={() => setDeleteID(null)}>
-          <p className="muted">
-            This removes the block and its content from the document. You can
-            undo the change below the last block.
-          </p>
-          <div className="modal-actions">
-            <button
-              className="secondary-button"
-              onClick={() => setDeleteID(null)}
-            >
-              Keep it
-            </button>
-            <button
-              className="danger-button"
-              onClick={() => {
-                undo.current?.stopCapturing();
-                removeBlock(session.doc, deleteID);
-                setDeleteID(null);
-              }}
-            >
-              Delete block
-            </button>
-          </div>
-        </Modal>
-      )}
-    </div>
+    </EditorFullscreenProvider>
   );
 }

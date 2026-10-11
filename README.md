@@ -66,10 +66,11 @@ Output is under `apps/desktop/release/`. The app includes the compiled Go execut
 
 - Organize documents in nested, collapsible folders. Create, rename, move, search, and delete documents and folders. Nonempty folders must be emptied before deletion.
 - Add a **Doc**, **Canvas**, or **Slides** block at either end or between existing blocks. Click the previews to jump to neighboring blocks.
-- Use the right-hand map to jump between blocks: blue notes, red canvases, yellow slides, with a marker for every slide.
+- Use the right-hand map or previous/next previews to navigate between blocks: blue notes, red canvases, yellow slides, with a marker for every slide. Vertical scrolling stays inside the active editor; both block previews remain visible. The map fills its available height, and hover/focus reveals complete block and slide titles.
 - Doc: rich text, headings, lists, quotes, code, undo/redo, Markdown shortcuts/paste, Markdown insertion and export, shared cursor labels.
 - Canvas: rectangle, ellipse, arrow, freehand, text, colors/fill, selection/dragging, labels on shapes, pan/zoom/fit, undo/redo, SVG export, live collaborator pointers. Keyboard shortcuts are V/H/R/O/A/P/T while the workspace is focused; Delete removes selection; Cmd/Ctrl+Z undoes local changes. Use the hand tool to pan on touch screens.
-- Slides: scroll horizontally, add a title or content layout, switch layouts, add a note or canvas to a content slide, and present using arrow keys and Escape. Switching content mode preserves the note and drawing.
+- Fullscreen: use the expand button at the bottom of any editor’s left rail, or in an individual slide’s header. Notes, canvases, decks, individual slides, and embedded slide content can all fill the screen. Exit with the X at the bottom of the rail or Escape. A compact previous/current/next map sits above X. Hover to expand it over the controls; keyboard activation or a tap also opens it. Navigate to any block or slide without leaving fullscreen, and collapse the map to return to the controls. Editing, selection, and canvas position are retained. Mobile browsers without the native API use the same distraction-free view inside the viewport.
+- Slides: scroll horizontally with the trackpad/wheel or swipe; the track snaps to each slide and updates the map/counter. Previous/next controls and slide markers also navigate horizontally. Add a title or content layout, switch layouts, add a note or canvas to a content slide, and present using arrow keys and Escape. Switching content mode preserves the note and drawing.
 - Cmd/Ctrl+K opens document search. Edits save automatically. Offline content merges when the connection returns.
 
 ## Verify

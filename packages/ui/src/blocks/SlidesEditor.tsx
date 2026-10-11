@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import {
   Plus,
@@ -11,6 +11,7 @@ import {
   X,
   Undo2,
   Redo2,
+  Maximize2,
 } from "lucide-react";
 import {
   addSlide,
@@ -22,6 +23,7 @@ import type { DocumentSession } from "@office/collaboration";
 import { useShared } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
 import { slideLayouts } from "./slideLayouts";
+import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 export function SlidesEditor({
   block,
   session,
@@ -35,10 +37,15 @@ export function SlidesEditor({
   requestedSlide?: string;
   requestToken?: number;
 }) {
+  const fullscreen = useEditorFullscreen(`block:${block.get("id")}`);
   const slides = block.get("slides") as Y.Array<SharedRecord>;
   useShared(slides);
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
+  const activeIndex = useRef(active);
+  activeIndex.current = active;
+  const reportActive = useRef(onActiveSlide);
+  reportActive.current = onActiveSlide;
   const [present, setPresent] = useState(false);
   const undo = useRef<Y.UndoManager | null>(null);
   const list = slides.toArray();
@@ -47,21 +54,75 @@ export function SlidesEditor({
     return () => undo.current?.destroy();
   }, [slides]);
   function go(index: number) {
-    index = Math.max(0, Math.min(index, list.length - 1));
+    const current = slides.toArray();
+    index = Math.max(0, Math.min(index, current.length - 1));
     setActive(index);
-    const slide = list[index];
+    activeIndex.current = index;
+    position(index);
+    const slide = current[index];
     if (slide) {
       onActiveSlide(slide.get("id"));
-      track.current
-        ?.querySelector<HTMLElement>(`[data-slide-id="${slide.get("id")}"]`)
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "center",
-        });
     }
   }
+  function position(index: number) {
+    const element = track.current;
+    const card = element?.querySelectorAll<HTMLElement>(".slide-card")[index];
+    if (element && card && !card.classList.contains("editor-fullscreen"))
+      element.scrollTo({
+        left:
+          card.offsetLeft - parseFloat(getComputedStyle(element).paddingLeft),
+        behavior: "instant",
+      });
+  }
+  useLayoutEffect(() => {
+    const element = track.current;
+    if (!element) return;
+    const align = () => position(activeIndex.current);
+    align();
+    const resize = new ResizeObserver(align);
+    resize.observe(element);
+    return () => resize.disconnect();
+  }, [list.map((s) => s.get("id")).join(","), fullscreen.active]);
   useEffect(() => {
+    const element = track.current;
+    if (!element) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const settle = () => {
+      clearTimeout(timer);
+      const padding = parseFloat(getComputedStyle(element).paddingLeft);
+      const cards = [...element.querySelectorAll<HTMLElement>(".slide-card")];
+      if (
+        !cards.length ||
+        cards.some((card) => card.classList.contains("editor-fullscreen"))
+      )
+        return;
+      let nearest = 0;
+      cards.forEach((card, index) => {
+        if (
+          Math.abs(card.offsetLeft - padding - element.scrollLeft) <
+          Math.abs(cards[nearest].offsetLeft - padding - element.scrollLeft)
+        )
+          nearest = index;
+      });
+      activeIndex.current = nearest;
+      setActive(nearest);
+      const selected = slides.get(nearest);
+      if (selected) reportActive.current(selected.get("id"));
+    };
+    // scrollend follows native snap animation; debounce supports older engines.
+    const scrolling = () => {
+      clearTimeout(timer);
+      timer = setTimeout(settle, 180);
+    };
+    element.addEventListener("scroll", scrolling);
+    element.addEventListener("scrollend", settle);
+    return () => {
+      clearTimeout(timer);
+      element.removeEventListener("scroll", scrolling);
+      element.removeEventListener("scrollend", settle);
+    };
+  }, [slides]);
+  useLayoutEffect(() => {
     if (requestedSlide) {
       const index = slides
         .toArray()
@@ -96,8 +157,16 @@ export function SlidesEditor({
     ? (slideLayouts[slide.get("layout")] ?? slideLayouts.content).component
     : null;
   return (
-    <div className="slides-editor">
-      <div className="editor-tools slide-tools" aria-label="Slide tools">
+    <div
+      ref={fullscreen.ref}
+      className={`slides-editor ${fullscreen.className}`}
+    >
+      <EditorTools
+        className="slide-tools"
+        label="Slide tools"
+        fullscreen={fullscreen}
+        fullscreenLabel="Fullscreen slides"
+      >
         <span className="rail-label">ADD</span>
         {Object.entries(slideLayouts).map(([id, layout]) => (
           <ToolButton
@@ -109,6 +178,20 @@ export function SlidesEditor({
           </ToolButton>
         ))}
         <span className="tool-divider" />
+        <ToolButton
+          label="Previous slide"
+          disabled={active === 0}
+          onClick={() => go(active - 1)}
+        >
+          <ArrowLeft size={17} />
+        </ToolButton>
+        <ToolButton
+          label="Next slide"
+          disabled={active >= list.length - 1}
+          onClick={() => go(active + 1)}
+        >
+          <ArrowRight size={17} />
+        </ToolButton>
         <ToolButton
           label="Present slides"
           disabled={!list.length}
@@ -135,63 +218,18 @@ export function SlidesEditor({
         <ToolButton label="Redo slides" onClick={() => undo.current?.redo()}>
           <Redo2 size={16} />
         </ToolButton>
-      </div>
+      </EditorTools>
       <div className="slides-workspace">
-        <div
-          className="slide-track"
-          ref={track}
-          onScroll={() => {
-            const el = track.current;
-            if (!el) return;
-            const cards = Array.from(
-              el.querySelectorAll<HTMLElement>("[data-slide-id]"),
-            );
-            const left = el.getBoundingClientRect().left;
-            let best = 0,
-              dist = Infinity;
-            cards.forEach((card, i) => {
-              const d = Math.abs(card.getBoundingClientRect().left - left - 20);
-              if (d < dist) {
-                dist = d;
-                best = i;
-              }
-            });
-            if (best !== active) {
-              setActive(best);
-              if (list[best]) onActiveSlide(list[best].get("id"));
-            }
-          }}
-        >
-          {list.map((s, index) => {
-            const layout =
-              slideLayouts[s.get("layout")] ?? slideLayouts.content;
-            const Component = layout.component;
-            return (
-              <div
-                className={`slide-card ${index === active ? "current" : ""}`}
-                data-slide-id={s.get("id")}
-                key={s.get("id")}
-              >
-                <div className="slide-topline">
-                  <span>
-                    {String(index + 1).padStart(2, "0")} / {layout.label}
-                  </span>
-                  <select
-                    aria-label={`Layout of slide ${index + 1}`}
-                    value={s.get("layout")}
-                    onChange={(e) => s.set("layout", e.target.value)}
-                  >
-                    {Object.entries(slideLayouts).map(([id, l]) => (
-                      <option key={id} value={id}>
-                        {l.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <Component slide={s} session={session} />
-              </div>
-            );
-          })}
+        <div className="slide-track" ref={track}>
+          {list.map((s, index) => (
+            <SlideCard
+              key={s.get("id")}
+              slide={s}
+              session={session}
+              index={index}
+              current={index === active}
+            />
+          ))}
           {!list.length && (
             <div className="empty-slides">
               <Layout size={32} />
@@ -209,32 +247,14 @@ export function SlidesEditor({
               ? `${String(active + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`
               : "No slides yet"}
           </span>
-          <div className="slide-dots">
+          <div className="slide-dots" aria-hidden="true">
             {list.map((s, i) => (
-              <button
-                aria-label={`Go to slide ${i + 1}`}
+              <span
                 className={active === i ? "active" : ""}
                 key={s.get("id")}
-                onClick={() => go(i)}
               />
             ))}
           </div>
-          <button
-            className="icon-button"
-            aria-label="Previous slide"
-            disabled={active === 0}
-            onClick={() => go(active - 1)}
-          >
-            <ArrowLeft size={17} />
-          </button>
-          <button
-            className="icon-button"
-            aria-label="Next slide"
-            disabled={active >= list.length - 1}
-            onClick={() => go(active + 1)}
-          >
-            <ArrowRight size={17} />
-          </button>
         </div>
       </div>
       {present && slide && Presentation && (
@@ -280,6 +300,74 @@ export function SlidesEditor({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function SlideCard({
+  slide,
+  session,
+  index,
+  current,
+}: {
+  slide: SharedRecord;
+  session: DocumentSession;
+  index: number;
+  current: boolean;
+}) {
+  useShared(slide);
+  const fullscreen = useEditorFullscreen(`slide:${slide.get("id")}`);
+  const layout = slideLayouts[slide.get("layout")] ?? slideLayouts.content;
+  const Component = layout.component;
+  const picker = (
+    <select
+      aria-label={`Layout of slide ${index + 1}`}
+      value={slide.get("layout")}
+      onChange={(e) => slide.set("layout", e.target.value)}
+    >
+      {Object.entries(slideLayouts).map(([id, l]) => (
+        <option key={id} value={id}>
+          {l.label}
+        </option>
+      ))}
+    </select>
+  );
+  return (
+    <div
+      ref={fullscreen.ref}
+      className={`slide-card ${current ? "current" : ""} ${fullscreen.className}`}
+      data-slide-id={slide.get("id")}
+      inert={!current}
+    >
+      {fullscreen.active && (
+        <div className="fullscreen-only slide-focus-tools">
+          <EditorTools
+            className="slide-tools"
+            label="Focused slide tools"
+            fullscreen={fullscreen}
+            fullscreenLabel={`Fullscreen slide ${index + 1}`}
+          >
+            <label className="slide-layout-tool">Layout{picker}</label>
+          </EditorTools>
+        </div>
+      )}
+      <div className="slide-topline">
+        <span>
+          {String(index + 1).padStart(2, "0")} / {layout.label}
+        </span>
+        <div className="slide-topline-actions">
+          {!fullscreen.active && picker}
+          <button
+            className="icon-button fullscreen-enter"
+            aria-label={`Fullscreen slide ${index + 1}`}
+            title="Fullscreen slide"
+            onClick={fullscreen.enter}
+          >
+            <Maximize2 size={14} />
+          </button>
+        </div>
+      </div>
+      <Component slide={slide} session={session} />
     </div>
   );
 }

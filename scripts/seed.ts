@@ -44,7 +44,7 @@ paragraph(
 paragraph(fragment, "Then give it some room", "heading", { level: 2 });
 paragraph(
   fragment,
-  "Scroll down to draw connections on the canvas, or shape your thoughts into slides. The little map on the right keeps the whole picture in view.",
+  "Use the map or the next-block preview to draw connections on the canvas, or shape your thoughts into slides. The little map on the right keeps the whole picture in view.",
 );
 const quote = new Y.XmlElement("blockquote");
 paragraph(

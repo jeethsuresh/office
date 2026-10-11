@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, Menu, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import path from "node:path";
@@ -116,7 +116,37 @@ async function createWindow() {
       sandbox: true,
     },
   });
-  window.on("closed", () => (window = null));
+  const owner = window;
+  let enteringFullscreen = false;
+  let nativeFullscreen = owner.isFullScreen();
+  let fullscreenWaiters: (() => void)[] = [];
+  const ready = () => {
+    enteringFullscreen = false;
+    fullscreenWaiters.splice(0).forEach((resolve) => resolve());
+  };
+  // macOS HTML fullscreen resolves in Chromium before the native Space
+  // animation ends. Queue an early Escape/X until the window is ready to exit.
+  owner.on("enter-html-full-screen", () => {
+    enteringFullscreen = !nativeFullscreen;
+  });
+  owner.on("enter-full-screen", () => {
+    nativeFullscreen = true;
+    ready();
+  });
+  owner.on("leave-full-screen", () => {
+    nativeFullscreen = false;
+    ready();
+  });
+  ipcMain.handle("office:fullscreen-ready", (event) => {
+    if (event.sender !== owner.webContents) throw new Error("Unknown window");
+    if (!enteringFullscreen) return;
+    return new Promise<void>((resolve) => fullscreenWaiters.push(resolve));
+  });
+  owner.on("closed", () => {
+    ready();
+    ipcMain.removeHandler("office:fullscreen-ready");
+    window = null;
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//.test(url)) void shell.openExternal(url);
     return { action: "deny" };

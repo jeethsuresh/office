@@ -562,20 +562,18 @@ p {
 .block-viewport {
   flex: 1;
   min-width: 0;
-  overflow: auto;
-  position: relative;
-  padding: 8px 35px 30px 40px;
-  scroll-snap-type: y proximity;
-  scroll-padding: 12px;
-  scrollbar-width: thin;
-  scrollbar-color: #d5d5cb transparent;
-}
-.office-block {
-  scroll-snap-align: start;
+  overflow: clip;
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 120px);
-  margin: 0 0 16px;
+  position: relative;
+  padding: 8px 35px 10px 40px;
+}
+.office-block {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 0;
 }
 .block-peek,
 .block-boundary-add {
@@ -656,7 +654,7 @@ p {
 }
 .block-body {
   flex: 1;
-  min-height: 420px;
+  min-height: 0;
   border-radius: 10px;
   display: flex;
   background: var(--paper);
@@ -670,9 +668,11 @@ p {
   display: flex;
   width: 100%;
   min-width: 0;
+  min-height: 0;
   position: relative;
 }
 .editor-tools {
+  position: relative;
   width: 54px;
   flex-shrink: 0;
   display: flex;
@@ -682,9 +682,9 @@ p {
   padding: 19px 0;
   border-right: 1px solid #edebe4;
   background: #f8f7f2;
-  overflow-y: auto;
-  scrollbar-width: none;
-  max-height: calc(100dvh - 240px);
+  overflow: hidden;
+  min-height: 0;
+  padding-bottom: 0;
 }
 .tool-button {
   display: grid;
@@ -729,11 +729,14 @@ p {
   display: flex;
   flex-direction: column;
   overflow: auto;
-  max-height: calc(100dvh - 238px);
-  min-height: 450px;
+  min-height: 0;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: auto;
 }
 .doc-paper > div:first-child {
-  flex: 1;
+  flex: 1 0 auto;
+  width: 100%;
+  display: block;
 }
 .prose {
   font-family: Georgia, "Times New Roman", serif;
@@ -743,7 +746,10 @@ p {
   outline: none;
   color: #5c5d55;
   max-width: 760px;
-  margin: auto;
+  margin: 0 auto;
+  width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
 }
 .prose h1 {
   font-family: Georgia, serif;
@@ -864,7 +870,7 @@ p {
 .drawing-surface {
   width: 100%;
   flex: 1;
-  min-height: 350px;
+  min-height: 0;
   touch-action: none;
   background: #fcfbf7;
   outline: none;
@@ -942,13 +948,22 @@ p {
   min-height: 0;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 22px 20px;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: 20px;
+  overscroll-behavior: contain;
+  position: relative;
+  padding: 22px 20px;
+
   scrollbar-width: thin;
   scrollbar-color: #ddd8c6 transparent;
 }
+.slide-track::after {
+  content: "";
+  flex: 0 0 15px;
+}
 .slide-card {
   scroll-snap-align: start;
+  scroll-snap-stop: always;
   width: calc(100% - 37px);
   flex-shrink: 0;
   min-width: 280px;
@@ -990,7 +1005,10 @@ p {
   padding: 50px 9%;
   position: relative;
   background: radial-gradient(ellipse at 90% 100%, #f2eedf, transparent 65%);
-  min-height: 325px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  overscroll-behavior-x: auto;
 }
 .slide-eyebrow {
   font-size: 9px;
@@ -1088,7 +1106,6 @@ p {
   width: 38px;
   padding: 10px 0;
   gap: 1px;
-  max-height: 310px;
 }
 .compact .tool-button {
   width: 27px;
@@ -1101,8 +1118,7 @@ p {
 }
 .compact .doc-paper {
   padding: 18px 22px;
-  min-height: 230px;
-  max-height: 310px;
+  min-height: 0;
 }
 .compact .prose {
   font-size: 14px;
@@ -1119,7 +1135,7 @@ p {
   font-size: 8px;
 }
 .compact .drawing-surface {
-  min-height: 225px;
+  min-height: 0;
 }
 .compact .canvas-caption {
   font-size: 8px;
@@ -1137,14 +1153,14 @@ p {
   gap: 6px;
   margin: auto;
 }
-.slide-dots button {
+.slide-dots span {
   width: 5px;
   height: 5px;
   border-radius: 50%;
   padding: 0;
   background: #d3cebe;
 }
-.slide-dots button.active {
+.slide-dots span.active {
   background: #b9a771;
   width: 18px;
   border-radius: 3px;
@@ -1171,6 +1187,7 @@ p {
   display: flex;
   align-items: center;
   flex-direction: column;
+  min-height: 0;
   padding: 24px 12px 22px 4px;
   border-left: 1px solid #ebe9e1;
   margin: 12px 12px 22px 0;
@@ -1185,7 +1202,8 @@ p {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: calc(100dvh - 290px);
+  flex: 1;
+  min-height: 0;
   overflow: auto;
   scrollbar-width: none;
   width: 100%;
@@ -1197,6 +1215,11 @@ p {
   position: relative;
   transition: opacity 0.2s;
   opacity: 0.45;
+  display: flex;
+  flex-direction: column;
+  flex-basis: 0;
+  flex-shrink: 0;
+  min-height: 28px;
 }
 .minimap-segment.active {
   opacity: 1;
@@ -1212,7 +1235,9 @@ p {
   border-radius: 50%;
 }
 .minimap-block {
-  height: 78px;
+  flex: 1;
+  min-height: 28px;
+  height: auto;
   width: 25px;
   padding: 0;
   background: color-mix(in srgb, var(--block-color) 12%, #f6f5f0);
@@ -1245,8 +1270,11 @@ p {
   flex-direction: column;
   gap: 2px;
   margin-top: 3px;
+  flex-basis: 0;
+  min-height: min-content;
 }
 .minimap-slides button {
+  flex: 1;
   width: 25px;
   min-height: 20px;
   border: 1px solid color-mix(in srgb, var(--block-color) 35%, transparent);
@@ -1269,8 +1297,25 @@ p {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: auto 0 0 6px;
+  margin: 0 0 0 6px;
   padding-top: 25px;
+}
+.minimap-tooltip {
+  position: fixed;
+  right: 66px;
+  z-index: 20001;
+  width: max-content;
+  max-width: min(330px, calc(100vw - 90px));
+  padding: 9px 12px;
+  border: 1px solid #dedccd;
+  border-radius: 6px;
+  color: #626553;
+  background: #fffdf7;
+  box-shadow: 0 5px 20px #484d4220;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  pointer-events: none;
 }
 .minimap-legend i {
   width: 3px;
@@ -1734,13 +1779,11 @@ p {
     width: 11px;
   }
   .block-viewport {
-    padding: 5px 8px 25px 10px;
-    scroll-snap-type: none;
-    scroll-padding: 5px;
+    padding: 5px 8px 8px 10px;
   }
   .office-block {
-    min-height: calc(100dvh - 108px);
-    margin-bottom: 12px;
+    min-height: 0;
+    margin-bottom: 0;
   }
   .block-heading {
     gap: 6px;
@@ -1781,13 +1824,12 @@ p {
     margin: 9px 4px 0;
   }
   .block-body {
-    min-height: 400px;
+    min-height: 0;
     border-radius: 7px;
   }
   .editor-tools {
     width: 39px;
     padding: 12px 0;
-    max-height: calc(100dvh - 207px);
   }
   .tool-button {
     width: 29px;
@@ -1802,8 +1844,7 @@ p {
   }
   .doc-paper {
     padding: 26px 18px 17px;
-    min-height: 450px;
-    max-height: calc(100dvh - 207px);
+    min-height: 0;
   }
   .prose {
     font-size: 14px;
@@ -1840,14 +1881,13 @@ p {
   .minimap-track {
     padding: 3px;
     width: 30px;
-    max-height: calc(100dvh - 220px);
   }
   .minimap-segment {
     width: 16px;
   }
   .minimap-block {
     width: 16px;
-    height: 65px;
+    height: auto;
   }
   .minimap-block span {
     font-size: 6px;
@@ -1890,11 +1930,15 @@ p {
     max-width: 65%;
   }
   .drawing-surface {
-    min-height: 410px;
+    min-height: 0;
   }
   .slide-track {
     padding: 14px 10px;
     gap: 12px;
+    scroll-padding-inline: 10px;
+  }
+  .slide-track::after {
+    flex-basis: 4px;
   }
   .slide-card {
     min-width: 0;
@@ -1910,7 +1954,7 @@ p {
   }
   .title-slide {
     padding: 33px 9%;
-    min-height: 335px;
+    min-height: 0;
   }
   .slide-eyebrow {
     font-size: 7px;
@@ -1940,7 +1984,7 @@ p {
   }
   .compact .editor-tools {
     width: 30px;
-    max-height: 300px;
+
     padding: 7px 0;
   }
   .compact .tool-button {
@@ -1950,8 +1994,7 @@ p {
   }
   .compact .doc-paper {
     padding: 14px 12px;
-    min-height: 240px;
-    max-height: 300px;
+    min-height: 0;
   }
   .compact .prose {
     font-size: 12px;
@@ -1960,7 +2003,7 @@ p {
     font-size: 6px;
   }
   .compact .drawing-surface {
-    min-height: 240px;
+    min-height: 0;
   }
   .compact .canvas-caption {
     font-size: 6px;
@@ -2073,5 +2116,330 @@ p {
   .peek-sketch {
     width: 35px;
     height: 20px;
+  }
+}
+
+/* Editor scrolling never changes the active block. */
+.main-area,
+.canvas-workspace,
+.slides-workspace {
+  min-height: 0;
+}
+.office-block[hidden] {
+  display: none;
+}
+.block-heading,
+.block-peek,
+.block-boundary-add,
+.document-end,
+.canvas-caption,
+.slide-navigation {
+  flex-shrink: 0;
+}
+.document-end {
+  margin: 8px 0 0;
+}
+.tool-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: inherit;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding-bottom: 8px;
+}
+.tool-footer {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  flex-shrink: 0;
+  padding: 7px 0;
+  border-top: 1px solid #e6e4db;
+  background: inherit;
+}
+.slide-topline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.slide-topline .icon-button {
+  width: 22px;
+  height: 22px;
+  color: #a89e7d;
+}
+.fullscreen-only {
+  display: none;
+}
+.slide-layout-tool {
+  font-size: 8px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #a89e7d;
+  width: 100%;
+  padding: 8px 3px;
+}
+.slide-layout-tool select {
+  width: 100%;
+  font-size: 9px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+/* A fixed fallback also works when mobile browsers do not implement Fullscreen. */
+.fullscreen-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.fullscreen-host::backdrop {
+  background: var(--paper);
+}
+.fullscreen-navigator {
+  width: 100%;
+  flex-shrink: 0;
+  padding: 7px 3px;
+}
+.fullscreen-map-peek {
+  flex-shrink: 0;
+  color: #95998d;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+}
+.fullscreen-map-preview {
+  width: 11px;
+  height: 16px;
+  border-radius: 2px;
+  opacity: 0.35;
+  color: white;
+  font-size: 7px;
+  display: grid;
+  place-items: center;
+}
+.fullscreen-map-preview.current {
+  height: 27px;
+  opacity: 0.85;
+}
+.fullscreen-map-preview.empty {
+  border: 1px dashed #c9c8bd;
+}
+.fullscreen-navigator.is-expanded {
+  position: absolute;
+  inset: 0 0 calc(49px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  padding: max(8px, env(safe-area-inset-top)) 3px 7px;
+  z-index: 2;
+  background: #f8f7f2;
+}
+.map-expanded > .tool-list {
+  visibility: hidden;
+}
+
+.minimap.fullscreen-map {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 6px 0;
+  border: 0;
+  flex: 1;
+}
+.fullscreen-map .minimap-heading {
+  margin: 0 0 12px;
+  font-size: 7px;
+}
+.fullscreen-map .minimap-track {
+  width: 100%;
+  gap: 8px;
+}
+.fullscreen-map .minimap-segment {
+  opacity: 0.65;
+}
+.fullscreen-map .minimap-segment.active {
+  opacity: 1;
+}
+.fullscreen-map .minimap-tooltip {
+  left: 60px;
+  right: auto;
+}
+.editor-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  width: 100%;
+  height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--paper);
+  box-shadow: none;
+}
+.editor-fullscreen .tool-footer:has(.fullscreen-enter) {
+  display: none;
+}
+.editor-fullscreen::backdrop {
+  background: var(--paper);
+}
+.editor-fullscreen > .editor-tools,
+.editor-fullscreen > .slide-focus-tools > .editor-tools {
+  width: 54px;
+  height: 100%;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.editor-fullscreen > .editor-tools .tool-button {
+  width: 32px;
+  height: 31px;
+  min-height: 31px;
+}
+.editor-fullscreen .fullscreen-enter,
+.editor-fullscreen .doc-footnote,
+.editor-fullscreen .canvas-caption {
+  display: none;
+}
+.editor-fullscreen > .doc-paper {
+  padding: max(40px, env(safe-area-inset-top)) clamp(24px, 6vw, 100px)
+    max(30px, env(safe-area-inset-bottom));
+}
+.editor-fullscreen > .doc-paper .prose {
+  min-height: calc(100dvh - 80px);
+  font-size: 17px;
+  line-height: 1.85;
+}
+.editor-fullscreen > .doc-paper .prose h1 {
+  font-size: 36px;
+}
+.editor-fullscreen > .doc-paper .prose h2 {
+  font-size: 24px;
+}
+.slides-editor.editor-fullscreen .slide-track {
+  padding: 0;
+  gap: 0;
+  scroll-padding-inline: 0;
+}
+.slides-editor.editor-fullscreen .slide-track::after {
+  flex-basis: 0;
+}
+.slides-editor.editor-fullscreen .slide-card {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.slides-editor.editor-fullscreen .slide-topline,
+.slides-editor.editor-fullscreen .slide-navigation {
+  display: none;
+}
+.slide-card.editor-fullscreen {
+  display: flex;
+  flex-direction: row;
+}
+.slide-card.editor-fullscreen > .fullscreen-only {
+  display: flex;
+  flex-shrink: 0;
+}
+.slide-card.editor-fullscreen > .slide-topline {
+  display: none;
+}
+.editor-fullscreen .title-slide,
+.editor-fullscreen .content-slide {
+  min-width: 0;
+}
+.editor-fullscreen .title-slide {
+  padding: 50px 9%;
+}
+@media (max-width: 760px) {
+  .editor-fullscreen > .doc-paper {
+    padding: max(24px, env(safe-area-inset-top)) 20px
+      max(20px, env(safe-area-inset-bottom));
+  }
+  .editor-fullscreen > .editor-tools,
+  .editor-fullscreen > .slide-focus-tools > .editor-tools {
+    width: 42px;
+  }
+  .editor-fullscreen > .doc-paper .prose {
+    font-size: 15px;
+  }
+  .fullscreen-map .minimap-tooltip {
+    left: 46px;
+  }
+  .minimap-tooltip {
+    right: 35px;
+  }
+}
+
+@media (max-height: 650px) {
+  .topbar {
+    height: 46px;
+  }
+  .document-caption,
+  .document-end {
+    display: none;
+  }
+  .block-viewport {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+  .block-heading {
+    min-height: 30px;
+    margin-bottom: 3px;
+  }
+  .block-peek,
+  .block-boundary-add {
+    height: 20px;
+    min-height: 20px;
+    margin: 0 4px 4px;
+  }
+  .block-peek.next,
+  .block-boundary-add:last-child {
+    margin: 4px 4px 0;
+  }
+  .slide-track {
+    padding: 8px;
+    scroll-padding-inline: 8px;
+  }
+  .slide-topline {
+    padding: 4px 10px;
+  }
+  .slide-navigation {
+    padding: 3px 10px;
+  }
+  .content-slide {
+    padding: 9px 12px;
+  }
+  .content-slide-title {
+    font-size: 21px;
+    min-height: 28px;
+    padding-bottom: 2px;
+  }
+  .slide-content-switch {
+    margin: 0 0 4px;
+  }
+  .title-slide {
+    padding: 20px 9%;
+  }
+  .title-slide-title {
+    font-size: 28px;
+    margin-bottom: 12px;
+  }
+  .slide-eyebrow {
+    margin-bottom: 12px;
+  }
+  .slide-decoration {
+    display: none;
+  }
+  .compact .doc-paper {
+    padding: 12px;
   }
 }

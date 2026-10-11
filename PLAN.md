@@ -50,3 +50,29 @@ A fresh Bun monorepo at `~/js/office`, inspired by rss's Electron + Go packaging
 
 - Shared server mode is a trusted-workspace MVP, without accounts/permissions or Internet deployment automation.
 - CRDT journal compaction, folder CRDT/offline metadata mutations, advanced drawing tools, native mobile shells, and more slide layouts are future work.
+
+## Navigation and fullscreen refinement — 2026-10-11
+
+- [x] Reproduce the content-slide note/toolbar rendering defect and identify its layout cause.
+- [x] Capture wheel/touch/keyboard scrolling within editors; restrict block and slide navigation to the minimap and explicit previous/next controls. Keep both adjacent block previews visible.
+- [x] Add reusable distraction-free fullscreen for notes, canvases, slide decks, individual slides, and embedded note/canvas content. Preserve the mounted editor and local viewport; keep the exit X at the bottom of the controls rail and support Escape.
+- [x] Fix embedded editor sizing and text alignment across desktop and mobile.
+- [x] Verify scroll isolation, fullscreen entry/exit, editing retention, layout bounds, existing collaboration, and packaged Electron behavior. Rebuild the native app and update documentation.
+
+The embedded editor and toolbar had independent 310px height caps inside a taller slide body. Removed those caps and made the viewport/child sizing explicit. Block selection now uses a fixed viewport with inactive blocks hidden/inert; slides move only through explicit controls, with inactive cards inert. Canvas wheel handling uses a non-passive native listener. Fullscreen promotes the existing editor subtree, with a viewport fallback for unsupported mobile browsers.
+
+- Verification checkpoint: all 12 acceptance checks pass against the source build, including native element fullscreen entry/Escape/X and entry from an already-fullscreen window; touch pan/swipe capture; desktop, portrait, and short landscape bounds; editor identity/content retention; collaboration/reconnect; and backend restart. Five model tests and seven Go race tests pass. macOS fullscreen exits now wait for the native Space animation to finish. Rebuilding the final package and running acceptance checks against that executable.
+
+- Final result: all 12 acceptance checks pass with native tests running against the rebuilt `apps/desktop/release/mac-arm64/office.app/Contents/MacOS/office`. Typecheck, production build, five model tests, and seven Go race tests pass. README and architecture/verification notes are updated. Existing workspaces are preserved; the refreshed welcome copy only applies to newly created workspaces. Quit/reopen the running app to load the new native bundle.
+
+## Minimap and slide navigation refinement — 2026-10-11
+
+- [x] Make the document minimap distribute its blocks/slide markers across all available height and show full titles on hover/focus.
+- [x] Restore horizontal wheel/trackpad/touch slide scrolling with sticky snapping; keep vertical block navigation captured and canvas gestures isolated. This supersedes the earlier slide-scroll lock.
+- [x] Add a compact current/previous/next navigator above the fullscreen exit X. Hover, keyboard activation, or tap expands the complete map over the controls.
+- [x] Keep a stable fullscreen host while navigating among blocks and slides, including embedded editors, so navigation never exits fullscreen.
+- [x] Verify normal/fullscreen scrolling, hover titles, fullscreen navigation and exit, mobile/touch access, collaboration, and the rebuilt Electron package; update documentation.
+
+- Implementation checkpoint: full-height proportional markers and immediate full-title tooltips are implemented. Native slide snapping restores horizontal wheel/touch motion and updates the map/counter after scrolling settles. Fullscreen uses a stable shared host, keeping each editor mounted while the map changes the focused block or slide. Desktop and mobile navigation checks pass. Visual inspection caught a hover expansion replacing the compact button under the pointer with a slide marker; the expand/collapse button now stays anchored above X. Rechecking that click behavior and the rebuilt native package.
+
+- Final result: all 17 acceptance tests pass against the rebuilt packaged Electron executable and web/mobile UI. Typecheck, production/package build, and five model tests pass. Native navigation asserts a stable fullscreen host with no exit/re-entry events, and keyboard focus follows the selected slide. The native test waits for the actual fullscreenchange entry event before counting navigation events; reading fullscreenElement alone could occur before the entry notification. README, architecture, and verification notes are updated. Temporary preview processes are stopped. Quit/reopen Office to load the rebuilt bundle.

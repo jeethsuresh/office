@@ -97,7 +97,7 @@ test("desktop flow: folders, rich text, drawing, slide layouts, minimap, and ins
     page.locator(".slide-content-body .drawing-surface"),
   ).toBeVisible();
   await page.getByRole("button", { name: "Note", exact: true }).click();
-  await expect(page.getByLabel("Slide note")).toContainText(
+  await expect(page.getByLabel("Slide note", { exact: true })).toContainText(
     "Notes belong on slides too.",
   );
   await page
