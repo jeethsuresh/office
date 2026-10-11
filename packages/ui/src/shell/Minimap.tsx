@@ -8,6 +8,7 @@ import {
 import * as Y from "yjs";
 import { BLOCK_META, type BlockKind, type SharedRecord } from "@office/model";
 import { Plus } from "lucide-react";
+import { MinimapSlides } from "./MinimapSlides";
 
 export function Minimap({
   blocks,
@@ -74,12 +75,16 @@ export function Minimap({
           return (
             <div
               key={id}
-              className={`minimap-segment ${active === id ? "active" : ""}`}
+              className={`minimap-segment ${slides.length ? "minimap-deck" : ""} ${active === id ? "active" : ""}`}
+              data-map-block={id}
               style={
                 {
                   "--block-color": BLOCK_META[kind]?.color ?? "#888",
-                  flexGrow: 1 + slides.length,
-                  minHeight: 28 + slides.length * 25,
+                  flexGrow: 1,
+                  minHeight:
+                    28 +
+                    Math.min(5, slides.length) * 16 +
+                    (slides.length > 5 ? 28 : 0),
                 } as CSSProperties
               }
             >
@@ -94,29 +99,15 @@ export function Minimap({
                 <i />
               </button>
               {!!slides.length && (
-                <div
-                  className="minimap-slides"
-                  style={{ flexGrow: slides.length }}
-                >
-                  {slides.map((slide, slideIndex) => (
-                    <button
-                      key={slide.get("id")}
-                      {...hint(
-                        slide.get("id"),
-                        `${title} · Slide ${slideIndex + 1}: ${slide.get("title")?.toString() || "Untitled slide"}`,
-                      )}
-                      aria-label={`Map: slide ${slideIndex + 1}`}
-                      aria-current={
-                        active === id &&
-                        (activeSlides[id] ?? slides[0]?.get("id")) ===
-                          slide.get("id")
-                      }
-                      onClick={() => onNavigate(id, slide.get("id"))}
-                    >
-                      <span>{slideIndex + 1}</span>
-                    </button>
-                  ))}
-                </div>
+                <MinimapSlides
+                  slides={slides}
+                  title={title}
+                  selected={activeSlides[id]}
+                  active={active === id}
+                  onNavigate={(slide) => onNavigate(id, slide)}
+                  hint={hint}
+                  onScroll={() => setTooltip(null)}
+                />
               )}
             </div>
           );

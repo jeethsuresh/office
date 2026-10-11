@@ -8,7 +8,7 @@ Verified on macOS arm64 with Bun 1.4.0 and Go 1.25.2.
 - `bun run test:race`: seven Go store/server tests passed under the race detector.
 - `bun run build`: production UI, Go executable, Electron main, and sandboxed preload built successfully.
 - `bun run package:dir`: native macOS arm64 `apps/desktop/release/mac-arm64/office.app` built with bundled Go/UI and the Office icon. The local development signing identity was discovered by electron-builder; the app was not notarized.
-- Seventeen Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
+- Twenty Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
 
 The acceptance suite verifies:
 
@@ -23,9 +23,10 @@ The acceptance suite verifies:
 9. Full-height embedded editor/toolbar alignment and top-aligned text at 1400×1000, 390×844, and 844×390. Each profile also verifies the fallback used when native element fullscreen is unavailable.
 10. Real Chromium touch gestures: vertical swipes cannot navigate blocks, horizontal swipes snap between slides, and the hand tool pans the canvas.
 
-11. Full-height proportional minimap markers at desktop/mobile sizes, immediate full-title hover tooltips, and tooltip viewport bounds.
+11. Full-height block sections at desktop/mobile sizes, immediate full-title hover tooltips, and tooltip viewport bounds.
 12. Horizontal wheel scrolling from title slides and embedded notes, snapping in both directions and fullscreen, active map/counter updates, and embedded canvas gesture isolation.
 13. Compact previous/current/next fullscreen previews; hover expansion that hides the rail controls; keyboard/touch access; an anchored expand/collapse click target; navigation among notes, canvases, decks, individual slides, and embedded editors without leaving fullscreen. Tests assert the native fullscreen host stays identical and emits no exit/re-entry events while navigating, and that the original note DOM node survives.
+14. Slide markers contained inside one equally sized deck section, with all five rows visible for short decks. Twelve-slide decks center a five-row window on the current slide, including empty slots at the first/last slides. Wheel and hover browsing leave the active slide unchanged; pointer departure recenters it. Real touch scrolling, arrow taps, keyboard browsing, selection/focus, and navigation in the expanded fullscreen map pass. Desktop/mobile checks assert the map stays within the viewport without horizontal page overflow.
 
 Native fullscreen verification covers early Escape during the macOS transition, the bottom X, and entry from an already-fullscreen window. A dedicated preload operation waits for the native fullscreen animation, preventing a window-size change from leaving the renderer stuck in fullscreen. Existing collaboration and persistence checks passed after these UI changes.
 
