@@ -1,0 +1,13 @@
+{
+  "name": "@office/collaboration",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@office/model": "workspace:*",
+    "yjs": "^13.6.27",
+    "y-protocols": "^1.0.6",
+    "y-indexeddb": "^9.0.12"
+  }
+}

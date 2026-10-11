@@ -1,0 +1,10 @@
+node_modules
+**/dist
+**/dist-electron
+**/release
+**/resources
+.cache
+.office-data
+test-results
+bun.lock
+backend

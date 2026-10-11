@@ -1,0 +1,12 @@
+node_modules/
+dist/
+dist-electron/
+release/
+apps/desktop/resources/bin/*
+apps/desktop/resources/web/
+.office-data/
+test-results/
+playwright-report/
+*.log
+.DS_Store
+.cache/

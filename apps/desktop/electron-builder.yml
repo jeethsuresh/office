@@ -1,0 +1,25 @@
+appId: com.jeeth.office
+productName: Office
+executableName: office
+directories:
+  output: release
+files:
+  - dist-electron/**/*
+  - package.json
+extraResources:
+  - from: resources/bin
+    to: bin
+  - from: resources/web
+    to: web
+mac:
+  icon: resources/icon.png
+  target: dmg
+  category: public.app-category.productivity
+win:
+  icon: resources/icon.png
+  target: nsis
+linux:
+  icon: resources/icon.png
+  target: AppImage
+  category: Office
+artifactName: Office-${version}-${os}-${arch}.${ext}

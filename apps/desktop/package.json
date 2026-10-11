@@ -1,0 +1,17 @@
+{
+  "name": "@office/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An office for connected thoughts",
+  "author": "Jeeth",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "package": "electron-builder --publish never",
+    "package:dir": "electron-builder --dir --publish never"
+  },
+  "devDependencies": {
+    "electron": "^37.2.0",
+    "electron-builder": "^26.0.0"
+  }
+}
