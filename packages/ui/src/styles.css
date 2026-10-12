@@ -550,33 +550,51 @@ p {
   min-height: 0;
   margin: 0;
 }
-.block-peek,
-.block-boundary-add {
-  height: 30px;
-  min-height: 30px;
+.block-editor {
+  --navigation-rail: 54px;
+  position: relative;
   display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  margin-top: 16px;
+}
+.block-navigation-pill {
+  position: absolute;
+  z-index: 20;
+  left: calc(50% + var(--navigation-rail) / 2);
+  transform: translateX(-50%);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 9px;
-  border-radius: 6px;
-  opacity: 0.65;
+  gap: 6px;
+  width: max-content;
+  max-width: min(250px, calc(100% - 90px));
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 999px;
   font-size: 10px;
-  color: #92968b;
-  margin: 2px 12px 13px;
-}
-.block-peek {
-  background: color-mix(in srgb, var(--block-color) 5%, transparent);
-  border: 1px solid color-mix(in srgb, var(--block-color) 10%, transparent);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--block-color) 7%, var(--paper));
+  border: 1px solid color-mix(in srgb, var(--block-color) 28%, var(--paper));
   color: var(--block-color);
+  box-shadow: 0 2px 7px #373a3b12;
 }
-.block-peek:hover,
-.block-boundary-add:hover {
-  opacity: 1;
-  background: color-mix(in srgb, var(--block-color, #7a8870) 9%, transparent);
+.block-navigation-pill svg {
+  flex-shrink: 0;
 }
-.block-peek.next,
-.block-boundary-add:last-child {
-  margin: 13px 12px 2px;
+.block-navigation-pill.previous {
+  top: -18px;
+}
+.block-navigation-pill.next {
+  bottom: 42px;
+}
+.block-doc .block-navigation-pill.next {
+  bottom: 54px;
+}
+.block-navigation-pill:hover {
+  background: color-mix(in srgb, var(--block-color) 13%, var(--paper));
+  box-shadow: 0 3px 9px #373a3b1b;
 }
 .block-heading {
   display: flex;
@@ -1951,16 +1969,11 @@ p {
     width: 23px;
     height: 27px;
   }
-  .block-peek,
-  .block-boundary-add {
-    font-size: 8px;
-    height: 24px;
-    min-height: 24px;
-    margin: 0 4px 9px;
+  .block-editor {
+    --navigation-rail: 39px;
   }
-  .block-peek.next,
-  .block-boundary-add:last-child {
-    margin: 9px 4px 0;
+  .block-navigation-pill {
+    max-width: min(210px, calc(100% - 75px));
   }
   .block-body {
     min-height: 0;
@@ -2216,38 +2229,10 @@ p {
   }
 }
 .peek-title {
-  max-width: 240px;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.peek-excerpt {
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-family: Georgia, serif;
-  font-style: italic;
-  font-size: 10px;
-  opacity: 0.65;
-}
-.peek-sketch {
-  width: 62px;
-  height: 26px;
-  flex-shrink: 0;
-}
-@media (max-width: 760px) {
-  .peek-title {
-    max-width: 140px;
-  }
-  .peek-excerpt {
-    max-width: 80px;
-    font-size: 8px;
-  }
-  .peek-sketch {
-    width: 35px;
-    height: 20px;
-  }
 }
 
 /* Editor scrolling never changes the active block. */
@@ -2517,16 +2502,6 @@ p {
   .block-heading {
     min-height: 30px;
     margin-bottom: 3px;
-  }
-  .block-peek,
-  .block-boundary-add {
-    height: 20px;
-    min-height: 20px;
-    margin: 0 4px 4px;
-  }
-  .block-peek.next,
-  .block-boundary-add:last-child {
-    margin: 4px 4px 0;
   }
   .slide-track {
     padding: 8px;

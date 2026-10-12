@@ -17,7 +17,6 @@ import {
   addBlock,
   removeBlock,
   makeUndoManager,
-  shapeValues,
   BLOCK_META,
   type BlockKind,
   type SharedRecord,
@@ -50,8 +49,14 @@ function Peek({
   if (!block)
     return (
       <button
-        className="block-boundary-add"
+        className={`block-boundary-add block-navigation-pill ${direction}`}
         onClick={onAdd}
+        title={
+          direction === "previous"
+            ? "Add block at beginning"
+            : "Add block at end"
+        }
+        style={{ "--block-color": "#92968b" } as React.CSSProperties}
         aria-label={
           direction === "previous"
             ? "Add block at beginning"
@@ -64,73 +69,19 @@ function Peek({
     );
   const kind = block.get("kind") as BlockKind;
   const Icon = icons[kind] ?? FileText;
-  const excerpt =
-    kind === "doc"
-      ? (block.get("content") as Y.XmlFragment)
-          .toString()
-          .replace(/<[^>]+>/g, " ")
-          .trim()
-          .slice(0, 90)
-      : kind === "slides"
-        ? (block.get("slides") as Y.Array<SharedRecord>)
-            .toArray()
-            .map((slide) => slide.get("title").toString())
-            .join(" / ")
-        : kind === "sheet"
-          ? `${block.get("rows").length} rows · ${block.get("columns").length} columns`
-          : `${(block.get("shapes") as Y.Map<SharedRecord>).size} objects`;
-  const shapes = kind === "canvas" ? shapeValues(block.get("shapes")) : [];
+  const title = block.get("title") || "Untitled block";
   return (
     <button
-      className={`block-peek ${direction}`}
+      className={`block-peek block-navigation-pill ${direction}`}
       onClick={onClick}
+      title={title}
+      aria-label={`Go to ${direction} block: ${title}`}
       style={
         { "--block-color": BLOCK_META[kind]?.color } as React.CSSProperties
       }
     >
       <Icon size={14} />
-      <span className="peek-title">{block.get("title")}</span>
-      {kind === "canvas" && shapes.length > 0 && (
-        <svg className="peek-sketch" aria-hidden="true" viewBox="0 0 1200 650">
-          {shapes
-            .slice(0, 8)
-            .map((shape) =>
-              shape.kind === "rect" ? (
-                <rect
-                  key={shape.id}
-                  x={shape.x}
-                  y={shape.y}
-                  width={Math.abs(shape.width)}
-                  height={Math.abs(shape.height)}
-                  rx="12"
-                  fill={shape.fill}
-                  stroke={shape.color}
-                  strokeWidth="12"
-                />
-              ) : shape.kind === "ellipse" ? (
-                <ellipse
-                  key={shape.id}
-                  cx={shape.x + shape.width / 2}
-                  cy={shape.y + shape.height / 2}
-                  rx={Math.abs(shape.width / 2)}
-                  ry={Math.abs(shape.height / 2)}
-                  fill={shape.fill}
-                  stroke={shape.color}
-                  strokeWidth="12"
-                />
-              ) : shape.kind === "arrow" ? (
-                <path
-                  key={shape.id}
-                  d={`M${shape.x} ${shape.y} l${shape.width} ${shape.height}`}
-                  fill="none"
-                  stroke={shape.color}
-                  strokeWidth="12"
-                />
-              ) : null,
-            )}
-        </svg>
-      )}
-      <span className="peek-excerpt">{excerpt}</span>
+      <span className="peek-title">{title}</span>
       {direction === "previous" ? (
         <ArrowUp size={14} />
       ) : (
@@ -257,12 +208,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     } as React.CSSProperties
                   }
                 >
-                  <Peek
-                    block={list[index - 1]}
-                    direction="previous"
-                    onClick={() => navigate(list[index - 1].get("id"))}
-                    onAdd={() => openInsert("start")}
-                  />
                   <div className="block-heading">
                     <span
                       className="block-type"
@@ -291,48 +236,56 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                       <Backlinks urn={`${session.id}:${id}:_`} />
                     </div>
                   </div>
-                  <div className="block-body">
-                    {kind === "doc" ? (
-                      <DocEditor
-                        fragment={block.get("content")}
-                        session={session}
-                      />
-                    ) : kind === "canvas" ? (
-                      <CanvasEditor
-                        shapes={block.get("shapes")}
-                        scope={id}
-                        session={session}
-                      />
-                    ) : kind === "slides" ? (
-                      <SlidesEditor
-                        block={block}
-                        session={session}
-                        onActiveSlide={(slide) =>
-                          setActiveSlides((prev) =>
-                            prev[id] === slide
-                              ? prev
-                              : { ...prev, [id]: slide },
-                          )
-                        }
-                        requestedSlide={
-                          request && request.block === id
-                            ? request.slide
-                            : undefined
-                        }
-                        requestToken={request?.token}
-                      />
-                    ) : kind === "sheet" ? (
-                      <SheetEditor block={block} session={session} />
-                    ) : (
-                      <p>This block type is not registered.</p>
-                    )}
+                  <div className="block-editor">
+                    <Peek
+                      block={list[index - 1]}
+                      direction="previous"
+                      onClick={() => navigate(list[index - 1].get("id"))}
+                      onAdd={() => openInsert("start")}
+                    />
+                    <div className="block-body">
+                      {kind === "doc" ? (
+                        <DocEditor
+                          fragment={block.get("content")}
+                          session={session}
+                        />
+                      ) : kind === "canvas" ? (
+                        <CanvasEditor
+                          shapes={block.get("shapes")}
+                          scope={id}
+                          session={session}
+                        />
+                      ) : kind === "slides" ? (
+                        <SlidesEditor
+                          block={block}
+                          session={session}
+                          onActiveSlide={(slide) =>
+                            setActiveSlides((prev) =>
+                              prev[id] === slide
+                                ? prev
+                                : { ...prev, [id]: slide },
+                            )
+                          }
+                          requestedSlide={
+                            request && request.block === id
+                              ? request.slide
+                              : undefined
+                          }
+                          requestToken={request?.token}
+                        />
+                      ) : kind === "sheet" ? (
+                        <SheetEditor block={block} session={session} />
+                      ) : (
+                        <p>This block type is not registered.</p>
+                      )}
+                    </div>
+                    <Peek
+                      block={list[index + 1]}
+                      direction="next"
+                      onClick={() => navigate(list[index + 1].get("id"))}
+                      onAdd={() => openInsert("end")}
+                    />
                   </div>
-                  <Peek
-                    block={list[index + 1]}
-                    direction="next"
-                    onClick={() => navigate(list[index + 1].get("id"))}
-                    onAdd={() => openInsert("end")}
-                  />
                 </section>
               </BlockActionsProvider>
             );

@@ -181,3 +181,15 @@ Decision: header Delete removes the whole block (confirmed by the user); the lef
 Checkpoint: 19 model/calculation checks pass, including independent timestamps, replay/undo, concurrent offline clocks, and arbitrary persistent-ID prefixes. Header controls export Markdown, SVG, CSV values, and Office slide JSON. Desktop/mobile screenshots were inspected; links retain their chip CSS and show content/value with location on hover. The existing 36 acceptance workflows pass. New header checks exposed React notifications during page departure on direct-link reload; stable listener snapshots and suppressing local UI notifications while broadcasting departure fix that path in the development check. Rebuilding the production package and running all 38 acceptance checks before publishing.
 
 Final verification: typecheck, formatting, the production/native package, all 19 model/calculation tests, and all 38 acceptance tests pass against the final bundle. New desktop/mobile checks exercise long-heading previews with complete hover details, independent shared timestamps, peer edits, full reload persistence, header undo/redo, whole-block deletion versus element deletion, structural undo, four export formats, and fullscreen access. Native and existing collaboration/navigation/offline checks pass. The two isolated fixtures left by the earlier timed-out checks were removed from the test server, and temporary development servers/configs were cleaned up. Documentation records the timestamp baseline for legacy blocks and export formats. Push to the authorized GitHub `origin/main`.
+
+## Overlay navigation pills — 2026-10-12
+
+- [x] Replace full-width previous/next bars with compact title/icon/color pills anchored to the editor surface; retain boundary insertion, full-title hover, and keyboard navigation.
+- [x] Position pills clear of the header, left tools, slide carousel, formula bar, and editor footer at desktop/mobile sizes. Preserve fullscreen behavior.
+- [x] Check existing navigation/editing workflows and screenshots, rebuild Electron, update verification notes, and push.
+
+Preview checkpoint: the existing processes on 4317/5174 are healthy and the working tree is clean.
+
+Implementation checkpoint: pills overlay the editor wrapper, with long titles truncated and exposed in full on hover. The bottom pill sits above the editor footer/carousel, and boundary insertion uses the same compact layout. Typecheck and the native package build pass; existing web/mobile/native acceptance checks and screenshot review are running.
+
+Final verification: typecheck, formatting, the production/native package, and all 38 acceptance workflows pass against the final bundle. Desktop/mobile/short-landscape screenshots confirm compact title/icon/color pills and clear carousel, formula bar, and footer controls. Notes, canvases, decks, and sheets retain explicit navigation and captured editor scrolling; fullscreen retains its existing navigator. README, architecture, and verification notes are updated. Recheck the preview processes and publish to the authorized GitHub `origin/main`.

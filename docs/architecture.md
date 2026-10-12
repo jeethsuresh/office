@@ -32,7 +32,7 @@ The Office logo opens `WorkspaceBrowser`, a catalog view independent of document
 
 `DocEditor` accepts a fragment and session. `CanvasEditor` accepts a shape map, session, and unique scope ID for cursors. Both support compact and read-only rendering. They can be used as document blocks or nested inside a slide layout. `SlidesEditor` owns horizontal navigation and presentation; it delegates rendering to the layout registry. Shell modules own the folder tree, document navigator, metadata forms, minimap, and block insertion.
 
-Block navigation selects a mounted block and hides/inerts the others inside a fixed viewport. It never relies on document scrolling. The minimap and adjacent previews are the navigation entry points. Slide navigation uses mandatory horizontal CSS snapping, explicit controls, and a scrollend listener with a debounce fallback to update selection/presence after a gesture settles. Inactive cards are inert so tabbing cannot navigate sideways. Notes contain vertical overflow and allow horizontal gestures to chain into the slide track; a non-passive canvas wheel listener owns pan/zoom gestures.
+Block navigation selects a mounted block and hides/inerts the others inside a fixed viewport. It never relies on document scrolling. The minimap and compact previous/next pills are the navigation entry points. Pills are positioned over an editor wrapper, outside its scrolling content, with title, type icon/color, and a full-title tooltip. Their bottom position clears the editor footer/carousel; boundary insertion uses the same pill layout. Slide navigation uses mandatory horizontal CSS snapping, explicit controls, and a scrollend listener with a debounce fallback to update selection/presence after a gesture settles. Inactive cards are inert so tabbing cannot navigate sideways. Notes contain vertical overflow and allow horizontal gestures to chain into the slide track; a non-passive canvas wheel listener owns pan/zoom gestures.
 
 New-slide and carousel navigation use native smooth scrolling, respecting reduced-motion preferences. Carousel dots are real buttons with current-slide state, and their own horizontal viewport keeps the active dot visible. Fullscreen selection and geometry alignment still use immediate positioning to preserve the stable host.
 
@@ -50,7 +50,7 @@ At 1200px and above, the map widens and `BlockPreview` renders bounded SVG summa
 
 Fullscreen also gives the minimap menu priority on Escape and stays expanded while the pointer moves to its adjacent menu. When the focused editor is deleted locally or remotely, the provider selects a surviving registered block during the layout phase, before disconnected-editor cleanup can exit the native session. Deleting the final block exits focus mode.
 
-The mobile profile activates at 760px. It uses a drawer sidebar and narrower rails/map while preserving all editor functionality. A short-screen profile at 650px height keeps adjacent previews and embedded editors usable in landscape. The same document and CRDT structures are used in both profiles.
+The mobile profile activates at 760px. It uses a drawer sidebar and narrower rails/map while preserving all editor functionality. A short-screen profile at 650px height keeps navigation pills and embedded editors usable in landscape. The same document and CRDT structures are used in both profiles.
 
 ## Add a slide layout
 

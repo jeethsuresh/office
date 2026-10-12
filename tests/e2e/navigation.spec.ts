@@ -16,18 +16,10 @@ async function assertPinned(page: Page, kind: string) {
   ).toBe(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await expect(
-    page
-      .locator(
-        ".office-block.is-active > .block-peek, .office-block.is-active > .block-boundary-add",
-      )
-      .first(),
+    page.locator(".office-block.is-active .block-navigation-pill").first(),
   ).toBeInViewport();
   await expect(
-    page
-      .locator(
-        ".office-block.is-active > .block-peek, .office-block.is-active > .block-boundary-add",
-      )
-      .last(),
+    page.locator(".office-block.is-active .block-navigation-pill").last(),
   ).toBeInViewport();
 }
 async function assertFullscreen(page: Page, selector: string) {
@@ -66,7 +58,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
   await page.mouse.wheel(0, 1600);
   await page.keyboard.press("PageDown");
   await assertPinned(page, "doc");
-  await page.locator(".office-block.is-active > .block-peek.next").click();
+  await page.locator(".office-block.is-active .block-peek.next").click();
   await assertPinned(page, "canvas");
   const canvas = page.locator(".block-canvas .drawing-surface");
   const before = await canvas.getAttribute("viewBox");
@@ -103,7 +95,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
   await expect(page.locator(".slide-card.current .title-slide")).toBeVisible();
   await page.getByRole("button", { name: /Go to canvas block/ }).click();
   await expect(canvas).toHaveAttribute("viewBox", panned!);
-  await page.locator(".office-block.is-active > .block-peek.previous").click();
+  await page.locator(".office-block.is-active .block-peek.previous").click();
   await assertPinned(page, "doc");
   // Long notes scroll within the note, without navigating the document.
   await page
