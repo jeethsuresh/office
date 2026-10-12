@@ -22,10 +22,14 @@ async function assertPinned(page: Page, kind: string) {
   ).toBe(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await expect(
-    page.locator(".block-viewport .block-navigation-pill").first(),
+    page
+      .locator(".block-viewport .block-header-navigation, .block-boundary-add")
+      .first(),
   ).toBeInViewport();
   await expect(
-    page.locator(".block-viewport .block-navigation-pill").last(),
+    page
+      .locator(".block-viewport .block-header-navigation, .block-boundary-add")
+      .last(),
   ).toBeInViewport();
 }
 async function assertFullscreen(page: Page, selector: string) {
@@ -65,7 +69,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
 }) => {
   await page.goto("/");
   await expect(page.getByText("All changes saved")).toBeVisible();
-  await atCenter(page, page.locator(".block-heading").first());
+  await atCenter(page, page.locator(".office-block.is-active .block-heading"));
   await page.mouse.wheel(0, 1600);
   await page.keyboard.press("PageDown");
   await assertPinned(page, "doc");

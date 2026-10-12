@@ -415,9 +415,13 @@ test("wide minimap previews reflect content and own insertion, deletion, and und
     await expect
       .poll(() =>
         page
-          .locator(".block-title")
-          .evaluateAll((inputs) =>
-            inputs.map((input) => (input as HTMLInputElement).value),
+          .locator(".office-block .block-heading")
+          .evaluateAll((headers) =>
+            headers.map(
+              (header) =>
+                header.querySelector<HTMLInputElement>(".block-title")?.value ??
+                header.querySelector(".peek-title")?.textContent,
+            ),
           ),
       )
       .toEqual([

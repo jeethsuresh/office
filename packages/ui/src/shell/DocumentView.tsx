@@ -1,14 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
-import {
-  ArrowDown,
-  ArrowUp,
-  FileText,
-  Layout,
-  PenTool,
-  Plus,
-  Table2,
-} from "lucide-react";
+import { FileText, Layout, PenTool, Plus, Table2 } from "lucide-react";
 import {
   blocks as getBlocks,
   blockMoves,
@@ -19,7 +11,6 @@ import {
   makeUndoManager,
   BLOCK_META,
   type BlockKind,
-  type SharedRecord,
 } from "@office/model";
 import type { DocumentSession } from "@office/collaboration";
 import { useShared, useSession } from "../shared/hooks";
@@ -35,56 +26,27 @@ import { BlockActionsProvider } from "../shared/BlockActions";
 import { BlockHeader } from "./BlockHeader";
 import { useBlockMotion } from "./useBlockMotion";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
-function BlockEdgePill({
-  block,
+function BlockBoundaryAdd({
   direction,
   onClick,
 }: {
-  block?: SharedRecord;
   direction: "previous" | "next";
   onClick: () => void;
 }) {
-  if (!block)
-    return (
-      <button
-        className={`block-boundary-add block-navigation-pill ${direction}`}
-        onClick={onClick}
-        title={
-          direction === "previous"
-            ? "Add block at beginning"
-            : "Add block at end"
-        }
-        style={{ "--block-color": "#92968b" } as React.CSSProperties}
-        aria-label={
-          direction === "previous"
-            ? "Add block at beginning"
-            : "Add block at end"
-        }
-      >
-        <Plus size={15} />
-        <span>Add block</span>
-      </button>
-    );
-  const kind = block.get("kind") as BlockKind;
-  const Icon = icons[kind] ?? FileText;
-  const title = block.get("title") || "Untitled block";
   return (
     <button
-      className={`block-peek block-navigation-pill ${direction}`}
+      className={`block-boundary-add block-navigation-pill ${direction}`}
       onClick={onClick}
-      title={title}
-      aria-label={`Go to ${direction} block: ${title}`}
-      style={
-        { "--block-color": BLOCK_META[kind]?.color } as React.CSSProperties
+      title={
+        direction === "previous" ? "Add block at beginning" : "Add block at end"
+      }
+      style={{ "--block-color": "#92968b" } as React.CSSProperties}
+      aria-label={
+        direction === "previous" ? "Add block at beginning" : "Add block at end"
       }
     >
-      <Icon size={14} />
-      <span className="peek-title">{title}</span>
-      {direction === "previous" ? (
-        <ArrowUp size={14} />
-      ) : (
-        <ArrowDown size={14} />
-      )}
+      <Plus size={15} />
+      <span>Add block</span>
     </button>
   );
 }
@@ -225,6 +187,16 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                       index={index}
                       count={list.length}
                       active={active === id}
+                      direction={
+                        index === activeIndex - 1
+                          ? "previous"
+                          : index === activeIndex + 1
+                            ? "next"
+                            : undefined
+                      }
+                      previous={list[index - 1]}
+                      next={list[index + 1]}
+                      onNavigate={navigate}
                     />
                     <div
                       className="block-body"
@@ -266,13 +238,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                         <p>This block type is not registered.</p>
                       )}
                     </div>
-                    {Math.abs(index - activeIndex) === 1 && (
-                      <BlockEdgePill
-                        block={block}
-                        direction={index < activeIndex ? "previous" : "next"}
-                        onClick={() => navigate(id)}
-                      />
-                    )}
                   </div>
                 </section>
               </BlockActionsProvider>
@@ -280,7 +245,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           })}
           {list.length > 0 && activeIndex === 0 && (
             <div className="block-boundary previous">
-              <BlockEdgePill
+              <BlockBoundaryAdd
                 direction="previous"
                 onClick={() => openInsert("start")}
               />
@@ -288,7 +253,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           )}
           {list.length > 0 && activeIndex === list.length - 1 && (
             <div className="block-boundary next">
-              <BlockEdgePill
+              <BlockBoundaryAdd
                 direction="next"
                 onClick={() => openInsert("end")}
               />

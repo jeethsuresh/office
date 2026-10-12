@@ -1,17 +1,27 @@
 import { test, expect } from "@playwright/test";
-import { newDocument, newBlock, setCell, selectCell } from "./office-fixtures";
+import {
+  newDocument,
+  newBlock,
+  setCell,
+  selectCell,
+  clickBlockAction,
+  openBlockActions,
+} from "./office-fixtures";
 
-for (const mobile of [false, true])
-  test(`neighbor surfaces and smooth block navigation on ${mobile ? "mobile" : "desktop"}`, async ({
+for (const profile of ["desktop", "mobile", "landscape"])
+  test(`neighbor headers and smooth block navigation on ${profile}`, async ({
     browser,
     request,
     baseURL,
   }) => {
+    const mobile = profile === "mobile";
     const context = await browser.newContext({
       baseURL,
       viewport: mobile
         ? { width: 390, height: 844 }
-        : { width: 1400, height: 1000 },
+        : profile === "landscape"
+          ? { width: 844, height: 390 }
+          : { width: 1400, height: 1000 },
       isMobile: mobile,
       hasTouch: mobile,
     });
@@ -65,7 +75,7 @@ for (const mobile of [false, true])
         ),
       ).toBe(slides);
       await expect(
-        page.locator(".office-block.is-active .block-navigation-pill"),
+        page.locator(".office-block .block-navigation-pill"),
       ).toHaveCount(0);
       await expect(
         page.locator(".office-block.is-neighbor .block-body"),
@@ -74,6 +84,15 @@ for (const mobile of [false, true])
         await expect(
           page.locator(`[data-block-id="${neighbor}"] .block-body`),
         ).toHaveAttribute("inert", "");
+      for (const button of [previous, next]) {
+        expect(
+          await button.evaluate((el) =>
+            el.parentElement!.classList.contains("block-heading"),
+          ),
+        ).toBe(true);
+        await expect(button.locator(".block-type")).toHaveCount(1);
+        await expect(button.locator(".block-sequence")).toHaveCount(1);
+      }
       const surface = (await page
         .locator(".office-block.is-active .block-body")
         .boundingBox())!;
@@ -81,11 +100,51 @@ for (const mobile of [false, true])
         after = (await next.boundingBox())!;
       expect(before.y + before.height).toBeLessThan(surface.y);
       expect(after.y).toBeGreaterThan(surface.y + surface.height);
+      expect(before.x).toBeCloseTo(surface.x + 1);
+      expect(after.x).toBeCloseTo(surface.x + 1);
+      expect(before.width).toBeCloseTo(surface.width - 2);
+      expect(after.width).toBeCloseTo(surface.width - 2);
       await expect(previous).toBeInViewport();
       await expect(next).toBeInViewport();
       await page.screenshot({
-        path: `test-results/block-edges-${mobile ? "mobile" : "desktop"}.png`,
+        path: `test-results/block-edges-${profile}.png`,
       });
+      const actions = await openBlockActions(page);
+      for (const name of [
+        "Go to previous block: Project notes",
+        "Go to next block: Presentation",
+      ])
+        await expect(
+          actions.getByRole("button", { name, exact: true }),
+        ).toBeVisible();
+      if (profile !== "desktop") {
+        await page.screenshot({
+          path: `test-results/block-navigation-overflow-${profile}.png`,
+        });
+        await page.keyboard.press("Escape");
+      }
+
+      // A neighboring header is keyboard navigation, never an editable title.
+      await previous.focus();
+      await page.keyboard.press("Enter");
+      await expect(page.locator(".office-block.is-active")).toHaveAttribute(
+        "data-block-id",
+        note,
+      );
+      await expect(page.locator(".block-viewport")).not.toHaveClass(
+        /is-navigating/,
+      );
+      await clickBlockAction(page, "Go to next block: Drawing");
+      await expect(page.locator(".office-block.is-active")).toHaveAttribute(
+        "data-block-id",
+        canvas,
+      );
+      await expect(page.locator(".block-viewport")).not.toHaveClass(
+        /is-navigating/,
+      );
+      await expect(
+        page.getByRole("dialog", { name: "Block actions", exact: true }),
+      ).toHaveCount(0);
 
       // Sample actual movement, rather than only asserting a CSS property.
       await page.evaluate((id) => {

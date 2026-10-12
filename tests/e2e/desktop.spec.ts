@@ -525,8 +525,19 @@ test("rich text, canvas, and slide content survive a Go server restart", async (
     await expect(
       page.getByLabel("Document text", { exact: true }),
     ).toContainText("Persisted across a restart.");
+    // Neighboring headers are navigation buttons until their block is active.
+    const canvasHeader = page.locator(".block-canvas .block-header-navigation");
+    await expect(canvasHeader).toHaveAttribute("title", "Durable drawing");
+    await canvasHeader.click();
+    await expect(page.locator(".block-viewport")).not.toHaveClass(
+      /is-navigating/,
+    );
     await expect(page.locator(".block-canvas input.block-title")).toHaveValue(
       "Durable drawing",
+    );
+    await page.getByRole("button", { name: /Go to slides block/ }).click();
+    await expect(page.locator(".block-viewport")).not.toHaveClass(
+      /is-navigating/,
     );
     await expect(
       page.getByLabel("Slide title", { exact: true }).first(),

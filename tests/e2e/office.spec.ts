@@ -218,6 +218,12 @@ test("two browser clients merge live and offline edits, blocks, and presence", a
     await addBlock(pa, "Canvas");
     await expect(pb.locator(".block-canvas")).toHaveCount(1);
     await pa.locator(".block-canvas input.block-title").fill("Drawn together");
+    const canvasHeader = pb.locator(".block-canvas .block-header-navigation");
+    await expect(canvasHeader).toHaveAttribute("title", "Drawn together");
+    await canvasHeader.click();
+    await expect(pb.locator(".block-viewport")).not.toHaveClass(
+      /is-navigating/,
+    );
     await expect(pb.locator(".block-canvas input.block-title")).toHaveValue(
       "Drawn together",
     );

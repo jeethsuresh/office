@@ -636,13 +636,14 @@ p {
   box-shadow: 0 3px 9px #373a3b1b;
 }
 .block-heading {
+  --block-header-padding: 10px;
   position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   height: 36px;
   min-height: 36px;
-  padding: 0 10px;
+  padding: 0 var(--block-header-padding);
   margin: 0;
   border: 1px solid #e4e2d9;
   border-bottom: 0;
@@ -650,6 +651,46 @@ p {
   background: #f8f7f2;
   min-width: 0;
   flex-shrink: 0;
+}
+.block-heading.is-previous,
+.block-heading.is-next {
+  padding: 0;
+}
+.block-heading.is-previous {
+  order: 1;
+  border-bottom: 1px solid #e4e2d9;
+  border-radius: 0 0 10px 10px;
+}
+.block-heading.is-previous + .block-body {
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+}
+.block-header-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0 var(--block-header-padding);
+  border-radius: inherit;
+  text-align: left;
+}
+.block-header-navigation .peek-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: #73766d;
+}
+.block-header-navigation > svg {
+  flex-shrink: 0;
+  color: var(--block-color);
+}
+.block-header-navigation:hover {
+  background: color-mix(in srgb, var(--block-color) 5%, transparent);
 }
 .block-type {
   display: inline-flex;
@@ -739,6 +780,10 @@ p {
   content: attr(aria-label);
   font-size: 12px;
   color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .block-heading.is-compact .block-updated {
   margin: 6px 10px;
@@ -2048,8 +2093,9 @@ p {
     margin-bottom: 0;
   }
   .block-heading {
+    --block-header-padding: 6px;
     gap: 6px;
-    padding: 0 6px;
+    padding: 0 var(--block-header-padding);
     height: 32px;
     min-height: 32px;
     border-radius: 7px 7px 0 0;
@@ -2070,6 +2116,15 @@ p {
   }
   .block-title {
     font-size: 10px;
+  }
+  .block-header-navigation {
+    gap: 6px;
+  }
+  .block-header-navigation .peek-title {
+    font-size: 10px;
+  }
+  .block-heading.is-previous {
+    border-radius: 0 0 7px 7px;
   }
   .block-heading .icon-button {
     opacity: 0.6;
@@ -2638,18 +2693,12 @@ p {
 
 @media (max-height: 450px) {
   .block-viewport {
-    --block-peek: 28px;
+    --block-peek: 30px;
     --block-gap: 4px;
   }
   .block-navigation-pill {
     height: 22px;
     font-size: 9px;
-  }
-  .block-peek.previous {
-    bottom: 3px;
-  }
-  .block-peek.next {
-    top: 3px;
   }
 }
 
