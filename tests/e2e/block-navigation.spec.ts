@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import {
   newDocument,
   newBlock,
@@ -7,6 +7,25 @@ import {
   clickBlockAction,
   openBlockActions,
 } from "./office-fixtures";
+
+async function assertBoundaryGap(page: Page, direction: "previous" | "next") {
+  const editor = (await page
+    .locator(".office-block.is-active .block-editor")
+    .boundingBox())!;
+  const button = page.getByRole("button", {
+    name:
+      direction === "previous" ? "Add block at beginning" : "Add block at end",
+    exact: true,
+  });
+  await expect(button).toBeInViewport();
+  const bounds = (await button.boundingBox())!;
+  const gap =
+    direction === "previous"
+      ? editor.y - bounds.y - bounds.height
+      : bounds.y - editor.y - editor.height;
+  expect(gap).toBeGreaterThanOrEqual(0);
+  expect(gap).toBeLessThanOrEqual(5);
+}
 
 for (const profile of ["desktop", "mobile", "landscape"])
   test(`neighbor headers and smooth block navigation on ${profile}`, async ({
@@ -36,6 +55,11 @@ for (const profile of ["desktop", "mobile", "landscape"])
       await page
         .getByLabel("Document text", { exact: true })
         .fill("Shared note content");
+      await assertBoundaryGap(page, "previous");
+      await assertBoundaryGap(page, "next");
+      await page.screenshot({
+        path: `test-results/block-single-${profile}.png`,
+      });
       const canvas = await newBlock(page, "Canvas", "Drawing");
       const slides = await newBlock(page, "Slides", "Presentation");
       await page
@@ -209,6 +233,7 @@ for (const profile of ["desktop", "mobile", "landscape"])
       await expect(
         page.getByLabel("Document text", { exact: true }),
       ).toHaveText("Shared note content");
+      await assertBoundaryGap(page, "previous");
       expect(
         await page.locator(".block-viewport").evaluate((el) => el.scrollTop),
       ).toBe(0);
@@ -232,6 +257,7 @@ for (const profile of ["desktop", "mobile", "landscape"])
       await expect(
         page.getByRole("button", { name: "Add block at end", exact: true }),
       ).toBeInViewport();
+      await assertBoundaryGap(page, "next");
     } finally {
       await context.close();
       await request.delete(`/api/documents/${documentID}`);

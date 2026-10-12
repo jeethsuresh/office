@@ -238,3 +238,17 @@ Acceptance checkpoint: the final native package builds and 40 of 44 checks pass.
 Final verification: typecheck, formatting, the production/native package, and all 44 acceptance checks pass in the final complete run. The four follow-up checks also pass independently. The initial Electron relaunch timeout did not repeat with startup diagnostics or in the full native sequence. Screenshots confirm neighboring navigation headers, responsive overflow navigation, and the unchanged distraction-free editor. Persistence, shared titles/order, exports, reference targets, canvas gestures, and offline recovery remain verified. Update the final preview checkpoint and publish to the authorized GitHub `origin/main`.
 
 Final preview checkpoint: no Office/Vite preview or test server is running on 4317/5174/4318/4319. No additional preview was started. The rebuilt Electron app is ready to reopen.
+
+## Compact document-end insertion space — 2026-10-12
+
+- [x] Reserve only the Add block button height plus a small gap at document ends, reclaiming space for the active editor while preserving neighboring previews.
+- [x] Preserve smooth navigation as the top/bottom insets change; verify first/last/single-block layouts on desktop, mobile, and short landscape.
+- [x] Rebuild Electron, update verification notes, recheck preview processes, and push.
+
+Preview checkpoint: Vite on 5174 (PID 86675) and the existing Go/Electron preview on 4317 (PID 86685) are running; reuse them. No test server is running on 4318, and the working tree started clean.
+
+Implementation checkpoint: insertion reserves 28px plus a 4px gap (22px plus 4px on short landscape), reclaiming 44px per document end on desktop. Neighbor previews retain their existing size. Asymmetric insets and editor height animate with block movement; target geometry keeps ResizeObserver callbacks from repeatedly retargeting the transition. Seventeen focused browser checks pass, including new first/last/single-block gap measurements. The mobile zoom check was adjusted to move the pointer out of the fullscreen map's hover region before exercising controls. Screenshots for all three profiles were inspected; typecheck passes. The exact fixture left by the timed-out mobile test was removed through an ephemeral isolated server that was then stopped. Rebuild Electron and verify native/reference/spreadsheet workflows.
+
+Final verification: production/native packaging, typecheck, formatting, and 26 selected acceptance checks pass (17 responsive navigation/header checks, four native workflows, two reference workflows, and three spreadsheet workflows). Native/screenshots confirm the compact end spaces and preserved neighboring previews. The native relaunch fixture now waits for its old owned backend listener to stop before reusing the saved port; the full native sequence passes. Three additional isolated relaunches passed during diagnostics. No model/backend behavior was changed. Update the final preview checkpoint and publish to the authorized GitHub `origin/main`.
+
+Final preview checkpoint: the same preview processes on 4317/5174 remain healthy (`/api/health` returns OK). No test server remains on 4318/4319, and no additional preview was started.

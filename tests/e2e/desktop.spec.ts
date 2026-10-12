@@ -619,6 +619,18 @@ test("Electron retains unsent offline content and its origin across relaunches",
       journalSize,
     );
     await app.close();
+    // Relaunch uses the same saved port. The parent can exit before its Go
+    // child has finished shutting down, so wait for that owned listener too.
+    await expect
+      .poll(async () => {
+        try {
+          await fetch(new URL("/api/health", origin));
+          return true;
+        } catch {
+          return false;
+        }
+      })
+      .toBe(false);
     app = await launch();
     const restored = await app.firstWindow();
     expect(new URL(restored.url()).origin).toBe(origin);

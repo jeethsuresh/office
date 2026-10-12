@@ -140,6 +140,10 @@ for (const width of [1400, 844, 390])
         .getByRole("button", { name: "Fullscreen canvas", exact: true })
         .click();
       await expect(canvas).toHaveClass(/editor-fullscreen/);
+      // The larger editor can leave the entry click over the fullscreen map.
+      // Move away from its hover region before exercising the canvas controls.
+      await page.mouse.move(width - 1, 10);
+      await expect(tools).not.toHaveClass(/map-expanded/);
       await tools.getByRole("button", { name: "Zoom in", exact: true }).click();
       await expect(zoom).toHaveText("125%");
       expect(

@@ -538,6 +538,10 @@ p {
   --block-peek: 64px;
   --block-gap: 12px;
   --block-step: 0px;
+  --block-boundary-size: 28px;
+  --block-boundary-gap: 4px;
+  --block-start-inset: calc(var(--block-peek) + var(--block-gap));
+  --block-end-inset: calc(var(--block-peek) + var(--block-gap));
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -547,14 +551,25 @@ p {
   position: relative;
   padding: 8px 35px 10px 40px;
 }
+.block-viewport.has-start-boundary {
+  --block-start-inset: calc(
+    var(--block-boundary-size) + var(--block-boundary-gap)
+  );
+}
+.block-viewport.has-end-boundary {
+  --block-end-inset: calc(
+    var(--block-boundary-size) + var(--block-boundary-gap)
+  );
+}
 .office-block {
   display: contents;
 }
 .block-editor {
   --navigation-rail: 54px;
   grid-area: 1 / 1;
-  align-self: center;
-  height: calc(100% - 2 * (var(--block-peek) + var(--block-gap)));
+  align-self: start;
+  margin-top: var(--block-start-inset);
+  height: calc(100% - var(--block-start-inset) - var(--block-end-inset));
   position: relative;
   top: calc(var(--block-offset) * var(--block-step));
   display: flex;
@@ -567,7 +582,10 @@ p {
 }
 .is-navigating .office-block .block-editor {
   visibility: visible;
-  transition: top 420ms cubic-bezier(0.22, 0.68, 0.25, 1);
+  transition:
+    top 420ms cubic-bezier(0.22, 0.68, 0.25, 1),
+    height 420ms cubic-bezier(0.22, 0.68, 0.25, 1),
+    margin-top 420ms cubic-bezier(0.22, 0.68, 0.25, 1);
 }
 @media (prefers-reduced-motion: reduce) {
   .is-navigating .office-block .block-editor {
@@ -581,7 +599,7 @@ p {
   --navigation-rail: 54px;
   grid-area: 1 / 1;
   position: relative;
-  height: var(--block-peek);
+  height: var(--block-boundary-size);
   z-index: 2;
 }
 .block-boundary.previous {
@@ -607,7 +625,7 @@ p {
   gap: 6px;
   width: max-content;
   max-width: min(250px, calc(100% - 90px));
-  height: 28px;
+  height: var(--block-boundary-size);
   padding: 0 11px;
   border-radius: 999px;
   font-size: 10px;
@@ -2695,9 +2713,9 @@ p {
   .block-viewport {
     --block-peek: 30px;
     --block-gap: 4px;
+    --block-boundary-size: 22px;
   }
   .block-navigation-pill {
-    height: 22px;
     font-size: 9px;
   }
 }

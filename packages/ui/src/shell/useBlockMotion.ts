@@ -34,17 +34,32 @@ export function useBlockMotion(
       }
       const style = getComputedStyle(root);
       const gap = parseFloat(style.getPropertyValue("--block-gap"));
-      root.style.setProperty(
-        "--block-step",
-        `${editor.getBoundingClientRect().height + gap}px`,
-      );
+      const peek = parseFloat(style.getPropertyValue("--block-peek"));
+      const boundary =
+        parseFloat(style.getPropertyValue("--block-boundary-size")) +
+        parseFloat(style.getPropertyValue("--block-boundary-gap"));
+      const start = root.classList.contains("has-start-boundary")
+        ? boundary
+        : peek + gap;
+      const end = root.classList.contains("has-end-boundary")
+        ? boundary
+        : peek + gap;
+      // Measure the destination layout, not the height partway through its CSS
+      // transition, so resizing the end spaces cannot keep retargeting motion.
+      const height =
+        root.clientHeight -
+        parseFloat(style.paddingTop) -
+        parseFloat(style.paddingBottom) -
+        start -
+        end;
+      root.style.setProperty("--block-step", `${height + gap}px`);
     }
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     if (editor) observer.observe(editor);
     return () => observer.disconnect();
-  }, [active, order, hydrated]);
+  }, [active, order, hydrated, position]);
 
   useLayoutEffect(() => {
     let frame = 0;

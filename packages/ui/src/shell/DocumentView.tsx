@@ -65,6 +65,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
   const positionIndex = list.findIndex(
     (block) => block.get("id") === motion.position,
   );
+  const visibleIndex = positionIndex < 0 ? activeIndex : positionIndex;
   const [activeSlides, setActiveSlides] = useState<Record<string, string>>({});
   const [request, setRequest] = useState<{
     block: string;
@@ -143,7 +144,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
       <div className="document-view">
         <div
           ref={motion.viewport}
-          className={`block-viewport ${motion.moving ? "is-navigating" : ""}`}
+          className={`block-viewport ${motion.moving ? "is-navigating" : ""} ${visibleIndex === 0 ? "has-start-boundary" : ""} ${visibleIndex === list.length - 1 ? "has-end-boundary" : ""}`}
         >
           {!list.length && (
             <div className="empty-document">
@@ -174,9 +175,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                   style={
                     {
                       "--block-color": BLOCK_META[kind]?.color,
-                      "--block-offset":
-                        index -
-                        (positionIndex < 0 ? activeIndex : positionIndex),
+                      "--block-offset": index - visibleIndex,
                     } as React.CSSProperties
                   }
                 >
