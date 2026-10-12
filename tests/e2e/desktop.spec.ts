@@ -61,6 +61,7 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await page
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();
+    await expect(page.locator(".sidebar")).toHaveCount(0);
     const browser = page.getByRole("region", {
       name: "Workspace browser",
       exact: true,

@@ -55,6 +55,12 @@ test("Office opens a sortable list/icon folder browser with history, creation, a
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();
     const view = browserView(page);
+    await expect(page.locator(".sidebar")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Toggle sidebar", exact: true }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Control+k");
+    await expect(view.getByLabel("Search this folder")).toBeFocused();
     await view
       .getByRole("button", { name: `Open folder: ${f.root.name}`, exact: true })
       .click();
@@ -102,6 +108,7 @@ test("Office opens a sortable list/icon folder browser with history, creation, a
       view.getByRole("heading", { name: f.root.name, exact: true }),
     ).toBeVisible();
     await page.reload();
+    await expect(page.locator(".sidebar")).toHaveCount(0);
     await expect(
       view.getByRole("button", { name: "Icon view", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -174,6 +181,7 @@ test("Office opens a sortable list/icon folder browser with history, creation, a
       .getByRole("button", { name: "Open document: A report", exact: true })
       .click();
     await expect(page.locator(".document-name")).toHaveText("A report");
+    await expect(page.locator(".sidebar")).toBeVisible();
   } finally {
     await f.cleanup();
   }
@@ -205,6 +213,9 @@ test("mobile workspace browser navigates folders, switches views, and creates in
       .getByRole("button", { name: "Open workspace", exact: true })
       .tap();
     await expect(page.locator(".sidebar")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Toggle sidebar", exact: true }),
+    ).toHaveCount(0);
     const view = browserView(page);
     await view
       .getByRole("button", { name: `Open folder: ${f.root.name}`, exact: true })

@@ -102,3 +102,11 @@ The embedded editor and toolbar had independent 310px height caps inside a talle
 - Implementation checkpoint: the 17 existing web/mobile acceptance tests and four new workflow tests pass. The new checks exercise folder/document moves, list/icon persistence, all sort orders, browser history, mobile creation, six-person presence with live rename/departure, and structural preview/insertion/deletion/undo. Explicit folder selector labels fix an accessibility mismatch exposed by the new checks. Visual review caught the fullscreen preview clipping at the former narrow rail; overflow and the anchored toggle are corrected, with an added pointer hit-test. Rebuilding the final Electron bundle and running all 24 acceptance tests, including native workspace browsing.
 
 - Final result: typecheck, production/native package build, and all 24 acceptance tests pass against the rebuilt packaged executable and web/mobile UI. Screenshot inspection confirms full-width fullscreen previews and readable desktop/mobile workspace views. Existing grouped slides, fullscreen sessions, collaboration, server restart, and offline content checks pass. README, architecture, and verification notes are complete. The isolated fixture left by the initial timed-out check was removed without changing other workspaces. Publish this validated change to the user-authorized GitHub `origin/main`; quit/reopen Office to load the new bundle.
+
+## Workspace sidebar refinement — 2026-10-11
+
+- [x] Hide the sidebar and its toggle throughout workspace browsing, including direct routes, folder navigation, and browser history. Preserve the document sidebar preference.
+- [x] Send Cmd/Ctrl+K to folder search while browsing the workspace.
+- [x] Verify existing desktop/mobile workspace workflows and packaged Electron browsing; rebuild the update for publication.
+
+- Final result: typecheck and the production/native package build pass. All seven targeted workspace/Electron acceptance tests pass, including sidebar absence after navigation/reload, sidebar restoration on document open, and folder-search keyboard focus. The rebuilt native app also passes its startup/shutdown and persistence checks. Publish the completed change to `origin/main`.

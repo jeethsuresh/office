@@ -128,6 +128,7 @@ export function App() {
   const [route, setRoute] = useState(readRoute);
   const selected = route.view === "document" ? route.id : "";
   const [sidebar, setSidebar] = useState(true);
+  const showSidebar = route.view === "document" && sidebar;
   const [action, setAction] = useState<WorkspaceAction | null>(null);
   const [error, setError] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -200,6 +201,14 @@ export function App() {
     const key = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault();
+        const browserSearch =
+          globalThis.document.querySelector<HTMLInputElement>(
+            '[aria-label="Search this folder"]',
+          );
+        if (browserSearch) {
+          browserSearch.focus();
+          return;
+        }
         setSidebar(true);
         setTimeout(
           () =>
@@ -242,9 +251,9 @@ export function App() {
   }
   return (
     <div
-      className={`office-app ${sidebar ? "sidebar-open" : "sidebar-closed"} ${mobile ? "mobile-profile" : "desktop-profile"}`}
+      className={`office-app ${showSidebar ? "sidebar-open" : "sidebar-closed"} ${mobile ? "mobile-profile" : "desktop-profile"}`}
     >
-      {sidebar && (
+      {showSidebar && (
         <>
           {mobile && (
             <button
@@ -271,13 +280,15 @@ export function App() {
       )}
       <main className="main-area">
         <header className="topbar">
-          <button
-            className="icon-button"
-            aria-label="Toggle sidebar"
-            onClick={() => setSidebar(!sidebar)}
-          >
-            {mobile ? <Menu size={19} /> : <PanelLeft size={18} />}
-          </button>
+          {route.view === "document" && (
+            <button
+              className="icon-button"
+              aria-label="Toggle sidebar"
+              onClick={() => setSidebar(!sidebar)}
+            >
+              {mobile ? <Menu size={19} /> : <PanelLeft size={18} />}
+            </button>
+          )}
           <div className="breadcrumb">
             <button
               className="workspace-home-link"

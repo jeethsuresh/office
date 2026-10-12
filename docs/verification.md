@@ -33,6 +33,8 @@ The acceptance suite verifies:
 
 Native fullscreen verification covers early Escape during the macOS transition, the bottom X, and entry from an already-fullscreen window. A dedicated preload operation waits for the native fullscreen animation, preventing a window-size change from leaving the renderer stuck in fullscreen. Existing collaboration and persistence checks passed after these UI changes.
 
+The workspace sidebar refinement was rechecked with all seven workspace/Electron acceptance tests against the rebuilt package. They verify sidebar/toggle absence while browsing, persistence across reloads, restoration when opening a document, and Cmd/Ctrl+K focusing folder search. Typecheck and the production/native build pass.
+
 Browser offline emulation alone did not close existing WebSockets in Electron. The final tests explicitly close both sides of the WebSocket transport and reject new connections during the partition; they assert local-only status and that each peer cannot see the other's edits until reconnecting.
 
 Screenshots and traces are generated under the ignored `test-results/` directory. Native mobile hardware, Windows/Linux bundles, Internet hosting, production auth, notarization, PPTX export, and very large journals were not verified and are not part of this release.
