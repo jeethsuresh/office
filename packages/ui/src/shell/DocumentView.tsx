@@ -7,8 +7,6 @@ import {
   Layout,
   PenTool,
   Plus,
-  Trash2,
-  Undo2,
 } from "lucide-react";
 import {
   blocks as getBlocks,
@@ -146,9 +144,16 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     slide: string;
     token: number;
   } | null>(null);
-  const [insert, setInsert] = useState<number | null>(null);
+  const [insert, setInsert] = useState<
+    "start" | "end" | "before" | "after" | null
+  >(null);
+  const [insertAnchor, setInsertAnchor] = useState("");
   const undo = useRef<Y.UndoManager | null>(null);
   const [deleteID, setDeleteID] = useState<string | null>(null);
+  function openInsert(position: NonNullable<typeof insert>) {
+    setInsertAnchor(active);
+    setInsert(position);
+  }
   useEffect(() => {
     undo.current = makeUndoManager(shared);
     return () => undo.current?.destroy();
@@ -201,7 +206,10 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 A note to start. A canvas to explore.
                 <br />A story to bring it all together.
               </p>
-              <button className="primary-button" onClick={() => setInsert(0)}>
+              <button
+                className="primary-button"
+                onClick={() => openInsert("start")}
+              >
                 <Plus size={18} />
                 Add your first block
               </button>
@@ -228,7 +236,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                   block={list[index - 1]}
                   direction="previous"
                   onClick={() => navigate(list[index - 1].get("id"))}
-                  onAdd={() => setInsert(0)}
+                  onAdd={() => openInsert("start")}
                 />
                 <div className="block-heading">
                   <span className="block-type">
@@ -245,22 +253,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     value={block.get("title") ?? ""}
                     onChange={(e) => block.set("title", e.target.value)}
                   />
-                  <button
-                    className="icon-button insert-block"
-                    aria-label={`Insert block after ${index + 1}`}
-                    title="Insert a block here"
-                    onClick={() => setInsert(index + 1)}
-                  >
-                    <Plus size={16} />
-                  </button>
-                  <button
-                    className="icon-button"
-                    aria-label={`Delete block ${index + 1}`}
-                    title="Delete this block"
-                    onClick={() => setDeleteID(id)}
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
                 <div className="block-body">
                   {kind === "doc" ? (
@@ -298,7 +290,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                   block={list[index + 1]}
                   direction="next"
                   onClick={() => navigate(list[index + 1].get("id"))}
-                  onAdd={() => setInsert(list.length)}
+                  onAdd={() => openInsert("end")}
                 />
               </section>
             );
@@ -306,15 +298,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           {list.length > 0 && (
             <div className="document-end">
               <span>A little more room to think.</span>
-              <button
-                className="text-button"
-                onClick={() => {
-                  undo.current?.undo();
-                }}
-              >
-                <Undo2 size={14} />
-                Undo block change
-              </button>
             </div>
           )}
         </div>
@@ -323,7 +306,9 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           active={active}
           activeSlides={activeSlides}
           onNavigate={navigate}
-          onAdd={() => setInsert(list.length)}
+          onAdd={() => openInsert("after")}
+          onDelete={() => setDeleteID(active)}
+          onUndo={() => undo.current?.undo()}
         />
         {insert !== null && (
           <Modal
@@ -334,6 +319,28 @@ export function DocumentView({ session }: { session: DocumentSession }) {
             <p className="muted">
               Three ways to think. One connected document.
             </p>
+            {list.length > 0 && (
+              <label className="field-label">
+                Block position
+                <select
+                  className="field"
+                  aria-label="Block position"
+                  value={insert}
+                  onChange={(event) =>
+                    setInsert(event.target.value as NonNullable<typeof insert>)
+                  }
+                >
+                  <option value="start">Beginning of document</option>
+                  {insertAnchor && (
+                    <>
+                      <option value="before">Before selected block</option>
+                      <option value="after">After selected block</option>
+                    </>
+                  )}
+                  <option value="end">End of document</option>
+                </select>
+              </label>
+            )}
             <div className="block-choices">
               {(Object.keys(BLOCK_META) as BlockKind[]).map((kind) => {
                 const meta = BLOCK_META[kind];
@@ -347,7 +354,17 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     }
                     onClick={() => {
                       undo.current?.stopCapturing();
-                      const block = addBlock(session.doc, kind, insert);
+                      const current = getBlocks(session.doc).toArray();
+                      const anchor = current.findIndex(
+                        (block) => block.get("id") === insertAnchor,
+                      );
+                      const index =
+                        insert === "start"
+                          ? 0
+                          : insert === "end" || anchor < 0
+                            ? current.length
+                            : anchor + (insert === "after" ? 1 : 0);
+                      const block = addBlock(session.doc, kind, index);
                       setInsert(null);
                       setTimeout(() => navigate(block.get("id")), 50);
                     }}
@@ -371,7 +388,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           <Modal title="Delete this block?" onClose={() => setDeleteID(null)}>
             <p className="muted">
               This removes the block and its content from the document. You can
-              undo the change below the last block.
+              undo the change from the minimap.
             </p>
             <div className="modal-actions">
               <button

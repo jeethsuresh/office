@@ -8,11 +8,11 @@ Verified on macOS arm64 with Bun 1.4.0 and Go 1.25.2.
 - `bun run test:race`: seven Go store/server tests passed under the race detector.
 - `bun run build`: production UI, Go executable, Electron main, and sandboxed preload built successfully.
 - `bun run package:dir`: native macOS arm64 `apps/desktop/release/mac-arm64/office.app` built with bundled Go/UI and the Office icon. The local development signing identity was discovered by electron-builder; the app was not notarized.
-- Twenty Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
+- Twenty-four Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
 
 The acceptance suite verifies:
 
-1. Native Electron startup, sandbox/context isolation, preload, rendered document, and owned Go process shutdown.
+1. Native Electron startup, sandbox/context isolation, preload, rendered document, Office-logo workspace browsing and icon view, return to the document, and owned Go process shutdown.
 2. Persisted rich text, canvas state, and slide titles after restarting Go.
 3. An unsent offline edit surviving a full Electron quit and relaunch, with the same origin. The server journal size is asserted unchanged while the offline edit is made.
 4. Folder creation, document creation/rename, Markdown, rich text, drawing, slide layouts/content switches, presentation, insertion, and the minimap.
@@ -27,6 +27,9 @@ The acceptance suite verifies:
 12. Horizontal wheel scrolling from title slides and embedded notes, snapping in both directions and fullscreen, active map/counter updates, and embedded canvas gesture isolation.
 13. Compact previous/current/next fullscreen previews; hover expansion that hides the rail controls; keyboard/touch access; an anchored expand/collapse click target; navigation among notes, canvases, decks, individual slides, and embedded editors without leaving fullscreen. Tests assert the native fullscreen host stays identical and emits no exit/re-entry events while navigating, and that the original note DOM node survives.
 14. Slide markers contained inside one equally sized deck section, with all five rows visible for short decks. Twelve-slide decks center a five-row window on the current slide, including empty slots at the first/last slides. Wheel and hover browsing leave the active slide unchanged; pointer departure recenters it. Real touch scrolling, arrow taps, keyboard browsing, selection/focus, and navigation in the expanded fullscreen map pass. Desktop/mobile checks assert the map stays within the viewport without horizontal page overflow.
+15. Office-logo workspace browsing, nested folders, breadcrumbs, up navigation, browser history, list/icon modes, name/type/updated sorting in both directions, and preference persistence across reloads. Document and folder moves are checked through the existing dialogs. Desktop/mobile creation starts in the current folder, and mobile browsing has no horizontal page overflow.
+16. Presence hover lists all six connected names despite only four visible avatars; renames and graceful departures update the open list. Keyboard focus and mobile taps also open the names.
+17. Wider minimaps show distinct rich-text structures and live canvas geometry. Inline insertion/deletion buttons are absent; minimap insertion resolves the selected position, deletion removes that block, and undo restores it. Narrow layouts retain the compact map. Expanded fullscreen previews are visually inspected and hit-tested beyond the original controls rail to prevent clipping.
 
 Native fullscreen verification covers early Escape during the macOS transition, the bottom X, and entry from an already-fullscreen window. A dedicated preload operation waits for the native fullscreen animation, preventing a window-size change from leaving the renderer stuck in fullscreen. Existing collaboration and persistence checks passed after these UI changes.
 

@@ -7,8 +7,9 @@ import {
 } from "react";
 import * as Y from "yjs";
 import { BLOCK_META, type BlockKind, type SharedRecord } from "@office/model";
-import { Plus } from "lucide-react";
+import { Plus, Trash2, Undo2 } from "lucide-react";
 import { MinimapSlides } from "./MinimapSlides";
+import { BlockPreview } from "./BlockPreview";
 
 export function Minimap({
   blocks,
@@ -16,6 +17,8 @@ export function Minimap({
   activeSlides,
   onNavigate,
   onAdd,
+  onDelete,
+  onUndo,
   className = "",
   label = "Document minimap",
 }: {
@@ -24,6 +27,8 @@ export function Minimap({
   activeSlides: Record<string, string>;
   onNavigate: (id: string, slide?: string) => void;
   onAdd?: () => void;
+  onDelete?: () => void;
+  onUndo?: () => void;
   className?: string;
   label?: string;
 }) {
@@ -96,7 +101,8 @@ export function Minimap({
                 {...hint(id, `${index + 1}. ${title}`)}
               >
                 <span>{String(index + 1).padStart(2, "0")}</span>
-                <i />
+                <span className="minimap-title">{title}</span>
+                {kind !== "slides" && <BlockPreview block={block} />}
               </button>
               {!!slides.length && (
                 <MinimapSlides
@@ -115,13 +121,36 @@ export function Minimap({
       </div>
       {onAdd && (
         <>
-          <button
-            className="minimap-add icon-button"
-            aria-label="Add block from map"
-            onClick={onAdd}
-          >
-            <Plus size={15} />
-          </button>
+          <div className="minimap-actions" aria-label="Block controls">
+            <button
+              className="minimap-add icon-button"
+              aria-label="Add block from map"
+              onClick={onAdd}
+            >
+              <Plus size={15} />
+            </button>
+            {onDelete && (
+              <button
+                className="minimap-delete icon-button"
+                aria-label="Delete selected block from map"
+                title="Delete selected block"
+                disabled={!blocks.length}
+                onClick={onDelete}
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
+            {onUndo && (
+              <button
+                className="minimap-undo icon-button"
+                aria-label="Undo block change"
+                title="Undo block change"
+                onClick={onUndo}
+              >
+                <Undo2 size={14} />
+              </button>
+            )}
+          </div>
           <div className="minimap-legend">
             <i style={{ background: BLOCK_META.doc.color }} />
             <i style={{ background: BLOCK_META.slides.color }} />

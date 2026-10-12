@@ -29,6 +29,7 @@ export function Sidebar({
   onCreateFolder,
   onManage,
   onClose,
+  onWorkspace,
 }: {
   workspace: Workspace;
   selected: string;
@@ -37,6 +38,7 @@ export function Sidebar({
   onCreateFolder: (parent: string) => void;
   onManage: (item: ItemAction) => void;
   onClose: () => void;
+  onWorkspace: () => void;
 }) {
   const [search, setSearch] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(() => {
@@ -137,14 +139,20 @@ export function Sidebar({
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
-        <div className="brand-mark">
-          <i />
-          <i />
-          <i />
-        </div>
-        <span>
-          office<span className="brand-dot">.</span>
-        </span>
+        <button
+          className="brand-home"
+          aria-label="Open workspace"
+          onClick={onWorkspace}
+        >
+          <div className="brand-mark">
+            <i />
+            <i />
+            <i />
+          </div>
+          <span>
+            office<span className="brand-dot">.</span>
+          </span>
+        </button>
         <button
           className="icon-button close-sidebar"
           aria-label="Close sidebar"

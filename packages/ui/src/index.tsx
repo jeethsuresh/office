@@ -24,9 +24,16 @@ import { Modal } from "./shared/Modal";
 import { Sidebar } from "./shell/Sidebar";
 import { DocumentView } from "./shell/DocumentView";
 import { WorkspaceDialog, type WorkspaceAction } from "./shell/WorkspaceDialog";
+import { WorkspaceBrowser } from "./shell/WorkspaceBrowser";
+import { Presence } from "./shell/Presence";
 const empty: Workspace = { id: "", folders: [], documents: [] };
-function readSelected() {
-  return new URLSearchParams(location.hash.slice(1)).get("document") ?? "";
+type Route =
+  { view: "workspace"; folder: string } | { view: "document"; id: string };
+function readRoute(): Route {
+  const params = new URLSearchParams(location.hash.slice(1));
+  return params.get("view") === "workspace"
+    ? { view: "workspace", folder: params.get("folder") ?? "" }
+    : { view: "document", id: params.get("document") ?? "" };
 }
 function currentUser(): User {
   try {
@@ -51,9 +58,6 @@ function SessionHeader({
   onShare: () => void;
 }) {
   const { status } = useSession(session);
-  const peers = [...session.awareness.getStates()]
-    .map(([id, state]) => ({ id, user: state.user as User }))
-    .filter((peer) => peer.user);
   return (
     <>
       <span
@@ -71,20 +75,7 @@ function SessionHeader({
                 ? "Saved on this device"
                 : "Sync needs attention"}
       </span>
-      <div
-        className="presence-avatars"
-        aria-label={`${peers.length} ${peers.length === 1 ? "person" : "people"} in this document`}
-      >
-        {peers.slice(0, 4).map((peer) => (
-          <span
-            key={peer.id}
-            title={peer.user.name}
-            style={{ background: peer.user.color }}
-          >
-            {peer.user.name.slice(0, 1).toUpperCase()}
-          </span>
-        ))}
-      </div>
+      <Presence session={session} />
       <button className="share-button" onClick={onShare}>
         <Users size={15} />
         <span>Share</span>
@@ -134,7 +125,8 @@ export function App() {
       return empty;
     }
   });
-  const [selected, setSelected] = useState(readSelected);
+  const [route, setRoute] = useState(readRoute);
+  const selected = route.view === "document" ? route.id : "";
   const [sidebar, setSidebar] = useState(true);
   const [action, setAction] = useState<WorkspaceAction | null>(null);
   const [error, setError] = useState("");
@@ -153,10 +145,14 @@ export function App() {
       );
       setError("");
       setLoaded(true);
-      const requested = readSelected();
-      if (requested && !data.documents.some((d) => d.id === requested)) {
+      const requested = readRoute();
+      if (
+        requested.view === "document" &&
+        requested.id &&
+        !data.documents.some((d) => d.id === requested.id)
+      ) {
         const next = data.documents[0]?.id ?? "";
-        setSelected(next);
+        setRoute({ view: "document", id: next });
         history.replaceState(
           null,
           "",
@@ -176,16 +172,28 @@ export function App() {
     return () => clearInterval(interval);
   }, [refresh]);
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || route.view !== "document") return;
     if (!selected && workspace.documents.length) {
       const next = workspace.documents[0].id;
-      setSelected(next);
+      setRoute({ view: "document", id: next });
       history.replaceState(null, "", `#document=${next}`);
-    } else if (!workspace.documents.length && loaded) setSelected("");
-  }, [workspace.documents, loaded, selected]);
+    } else if (!workspace.documents.length && selected)
+      setRoute({ view: "document", id: "" });
+  }, [workspace.documents, loaded, selected, route.view]);
+  useEffect(() => {
+    if (
+      loaded &&
+      route.view === "workspace" &&
+      route.folder &&
+      !workspace.folders.some((folder) => folder.id === route.folder)
+    ) {
+      setRoute({ view: "workspace", folder: "" });
+      history.replaceState(null, "", "#view=workspace");
+    }
+  }, [route, loaded, workspace.folders]);
   useEffect(() => {
     const hash = () => {
-      setSelected(readSelected());
+      setRoute(readRoute());
       void refresh();
     };
     window.addEventListener("hashchange", hash);
@@ -214,8 +222,13 @@ export function App() {
     if (mobile) setSidebar(false);
   }, [mobile]);
   function select(id: string) {
-    setSelected(id);
+    setRoute({ view: "document", id });
     location.hash = `document=${id}`;
+    if (mobile) setSidebar(false);
+  }
+  function browse(folder = "") {
+    setRoute({ view: "workspace", folder });
+    location.hash = `view=workspace${folder ? `&folder=${encodeURIComponent(folder)}` : ""}`;
     if (mobile) setSidebar(false);
   }
   const document = workspace.documents.find((d) => d.id === selected);
@@ -251,6 +264,7 @@ export function App() {
               setAction({ kind: "new-folder", parent })
             }
             onManage={setAction}
+            onWorkspace={() => browse()}
             onClose={() => setSidebar(false)}
           />
         </>
@@ -265,31 +279,42 @@ export function App() {
             {mobile ? <Menu size={19} /> : <PanelLeft size={18} />}
           </button>
           <div className="breadcrumb">
-            <span>{folder?.name ?? "Workspace"}</span>
-            <ChevronRight size={13} />
             <button
-              className="document-name"
-              onClick={() =>
-                document && setAction({ kind: "document", item: document })
-              }
+              className="workspace-home-link"
+              onClick={() => browse(folder?.id ?? "")}
             >
-              {document?.name ?? "A fresh start"}
+              {folder?.name ?? "Workspace"}
             </button>
+            {route.view === "document" && (
+              <>
+                <ChevronRight size={13} />
+                <button
+                  className="document-name"
+                  onClick={() =>
+                    document && setAction({ kind: "document", item: document })
+                  }
+                >
+                  {document?.name ?? "A fresh start"}
+                </button>
+              </>
+            )}
           </div>
           <div className="topbar-right">
-            {session && (
+            {document && session && (
               <SessionHeader session={session} onShare={() => setShare(true)} />
             )}
-            <button
-              className="icon-button"
-              aria-label="Document options"
-              disabled={!document}
-              onClick={() =>
-                document && setAction({ kind: "document", item: document })
-              }
-            >
-              <MoreHorizontal size={20} />
-            </button>
+            {route.view === "document" && (
+              <button
+                className="icon-button"
+                aria-label="Document options"
+                disabled={!document}
+                onClick={() =>
+                  document && setAction({ kind: "document", item: document })
+                }
+              >
+                <MoreHorizontal size={20} />
+              </button>
+            )}
           </div>
         </header>
         {error && (
@@ -301,18 +326,28 @@ export function App() {
             <button onClick={() => void refresh()}>Retry</button>
           </div>
         )}
-        <div className="document-caption">
-          <span>
-            <FileText size={13} />{" "}
-            {document ? "A living document" : "Your workspace"}
-          </span>
-          <span>
-            {document
-              ? `Updated ${relativeTime(document.updatedAt)}`
-              : "Everything starts with a little space"}
-          </span>
-        </div>
-        {document ? (
+        {route.view === "document" && (
+          <div className="document-caption">
+            <span>
+              <FileText size={13} />{" "}
+              {document ? "A living document" : "Your workspace"}
+            </span>
+            <span>
+              {document
+                ? `Updated ${relativeTime(document.updatedAt)}`
+                : "Everything starts with a little space"}
+            </span>
+          </div>
+        )}
+        {route.view === "workspace" ? (
+          <WorkspaceBrowser
+            workspace={workspace}
+            folderID={route.folder}
+            onFolder={browse}
+            onDocument={select}
+            onAction={setAction}
+          />
+        ) : document ? (
           <ConnectedDocument
             key={`${api.baseURL}:${document.id}`}
             id={document.id}

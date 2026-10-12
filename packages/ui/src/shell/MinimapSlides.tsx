@@ -8,6 +8,7 @@ import {
 } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { SharedRecord } from "@office/model";
+import { SlidePreview } from "./BlockPreview";
 
 export function MinimapSlides({
   slides,
@@ -178,6 +179,12 @@ export function MinimapSlides({
               onClick={() => onNavigate(slide.get("id"))}
             >
               <span>{index + 1}</span>
+              <div className="minimap-slide-content">
+                <span className="minimap-slide-title">
+                  {slide.get("title")?.toString() || "Untitled slide"}
+                </span>
+                <SlidePreview slide={slide} />
+              </div>
             </button>
           ))}
         </div>

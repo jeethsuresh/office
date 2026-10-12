@@ -117,8 +117,11 @@ test("desktop flow: folders, rich text, drawing, slide layouts, minimap, and ins
     page.getByLabel("Document text", { exact: true }),
   ).toBeInViewport();
   await page
-    .getByRole("button", { name: "Insert block after 1", exact: true })
+    .getByRole("button", { name: "Add block from map", exact: true })
     .click();
+  await page
+    .getByLabel("Block position", { exact: true })
+    .selectOption("after");
   await page.getByRole("dialog").getByRole("button", { name: /Doc/ }).click();
   await expect(page.locator(".office-block")).toHaveCount(4);
   await page

@@ -66,7 +66,7 @@ async function visibleSlides(map: Locator) {
           bounds.top >= viewport.top - 1 && bounds.bottom <= viewport.bottom + 1
         );
       })
-      .map((button) => Number(button.textContent));
+      .map((button) => Number(button.querySelector("span")?.textContent));
   });
 }
 async function centered(map: Locator, index: number) {

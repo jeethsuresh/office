@@ -59,6 +59,29 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
       true,
     );
     await page
+      .getByRole("button", { name: "Open workspace", exact: true })
+      .click();
+    const browser = page.getByRole("region", {
+      name: "Workspace browser",
+      exact: true,
+    });
+    await browser
+      .getByRole("button", { name: "Open folder: Studio", exact: true })
+      .click();
+    await browser
+      .getByRole("button", { name: "Icon view", exact: true })
+      .click();
+    await expect(browser.locator(".browser-card")).toHaveCount(1);
+    await browser
+      .getByRole("button", {
+        name: "Open document: A place for connected thoughts",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByLabel("Document text", { exact: true }),
+    ).toContainText("Good things happen");
+    await page
       .getByRole("button", { name: "Fullscreen note", exact: true })
       .click();
     await expect(page.locator(".doc-editor.editor-fullscreen")).toBeVisible();

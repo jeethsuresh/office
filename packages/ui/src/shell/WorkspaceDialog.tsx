@@ -100,6 +100,7 @@ export function WorkspaceDialog({
           {document ? "In folder" : "Parent folder"}
           <select
             className="field"
+            aria-label={document ? "In folder" : "Parent folder"}
             value={parent}
             onChange={(e) => setParent(e.target.value)}
           >
