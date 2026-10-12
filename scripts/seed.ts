@@ -3,17 +3,9 @@ import { createBlock, createRecord, createSlide } from "../packages/model/src";
 import { writeFileSync } from "node:fs";
 const doc = new Y.Doc();
 doc.clientID = 100;
-const note = createBlock(
-  "doc",
-  "Room for a little bit of everything",
-  "welcome-doc",
-);
-const sketch = createBlock("canvas", "Connect the dots", "welcome-canvas");
-const story = createBlock(
-  "slides",
-  "One idea. A whole story.",
-  "welcome-slides",
-);
+const note = createBlock("doc", "Getting started", "welcome-doc");
+const sketch = createBlock("canvas", "Example canvas", "welcome-canvas");
+const story = createBlock("slides", "Example slides", "welcome-slides");
 doc.getArray("blocks").push([note, sketch, story]);
 function paragraph(
   fragment: Y.XmlFragment,
@@ -29,29 +21,23 @@ function paragraph(
   fragment.insert(fragment.doc ? fragment.length : 0, [p]);
 }
 const fragment = note.get("content") as Y.XmlFragment;
-paragraph(fragment, "Good things happen when ideas share a space.", "heading", {
+paragraph(fragment, "Office", "heading", {
   level: 1,
 });
 paragraph(
   fragment,
-  "A note, a sketch, a story. All in the same document. Office is a place to follow your thinking wherever it goes — without switching tools.",
+  "Documents contain rich-text, canvas, slide, and spreadsheet blocks. Use the sidebar to organize documents into folders.",
 );
-paragraph(fragment, "Start with a thought", "heading", { level: 2 });
+paragraph(fragment, "Write and format text", "heading", { level: 2 });
 paragraph(
   fragment,
-  "Write here as you would on a blank page. Try # for a heading, **bold**, or a dash for a list. The tools to your left are always within reach.",
+  "Try # for a heading, **bold**, or a dash for a list. Formatting controls are on the left. Type /link to reference another document, block, or element.",
 );
-paragraph(fragment, "Then give it some room", "heading", { level: 2 });
+paragraph(fragment, "Navigate and edit blocks", "heading", { level: 2 });
 paragraph(
   fragment,
-  "Use the map or the next-block preview to draw connections on the canvas, or shape your thoughts into slides. The little map on the right keeps the whole picture in view.",
+  "Use the minimap or previous/next previews to navigate between blocks. Add, reorder, and delete blocks in the minimap. Use the fullscreen control to focus on an editor.",
 );
-const quote = new Y.XmlElement("blockquote");
-paragraph(
-  quote as unknown as Y.XmlFragment,
-  "One document. As many ways to think as you need.",
-);
-fragment.push([quote]);
 const shapes = sketch.get("shapes") as Y.Map<any>;
 [
   {
@@ -63,7 +49,7 @@ const shapes = sketch.get("shapes") as Y.Map<any>;
     height: 130,
     color: "#4f83cf",
     fill: "#e8effb",
-    text: "A thought",
+    text: "Doc",
   },
   {
     id: "s2",
@@ -74,7 +60,7 @@ const shapes = sketch.get("shapes") as Y.Map<any>;
     height: 160,
     color: "#cf6658",
     fill: "#f9e7e1",
-    text: "A connection",
+    text: "Canvas",
   },
   {
     id: "s3",
@@ -85,7 +71,7 @@ const shapes = sketch.get("shapes") as Y.Map<any>;
     height: 130,
     color: "#a08027",
     fill: "#fbf0ce",
-    text: "A story",
+    text: "Slides",
   },
   {
     id: "a1",
@@ -116,7 +102,7 @@ const shapes = sketch.get("shapes") as Y.Map<any>;
     height: 40,
     color: "#3e4147",
     fill: "none",
-    text: "Make space for the unexpected.",
+    text: "Example diagram",
   },
 ].forEach((shape) => shapes.set(shape.id, createRecord(shape)));
 const slides = story.get("slides") as Y.Array<any>;
@@ -125,23 +111,20 @@ const title = createSlide("title", "welcome-slide-title");
 const content = createSlide("content", "welcome-slide-content");
 slides.push([title, content]);
 (title.get("title") as Y.Text).delete(0, (title.get("title") as Y.Text).length);
-(title.get("title") as Y.Text).insert(0, "Ideas become stories.");
+(title.get("title") as Y.Text).insert(0, "Example presentation");
 (title.get("subtitle") as Y.Text).delete(
   0,
   (title.get("subtitle") as Y.Text).length,
 );
-(title.get("subtitle") as Y.Text).insert(
-  0,
-  "A little space. A new perspective. A place to begin.",
-);
+(title.get("subtitle") as Y.Text).insert(0, "Title slide");
 (content.get("title") as Y.Text).delete(
   0,
   (content.get("title") as Y.Text).length,
 );
-(content.get("title") as Y.Text).insert(0, "Everything connects.");
+(content.get("title") as Y.Text).insert(0, "Content slide");
 paragraph(
   content.get("content"),
-  "Every slide can hold a living note or an open canvas. Change the layout, add another chapter, and build your story together.",
+  "Content slides can contain a rich-text note or a canvas. Change the layout and add slides with the controls on the left; navigate with the carousel or minimap.",
 );
 writeFileSync(
   new URL("../backend/internal/store/welcome.bin", import.meta.url),

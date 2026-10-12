@@ -72,7 +72,7 @@ func Open(dir string) (*Store, error) {
 		return nil, err
 	}
 	t := now()
-	s.workspace = Workspace{ID: NewID(), Folders: []Folder{{ID: "studio", Name: "Studio", ParentID: ""}}, Documents: []Document{{ID: "welcome", Name: "A place for connected thoughts", FolderID: "studio", CreatedAt: t, UpdatedAt: t}}}
+	s.workspace = Workspace{ID: NewID(), Folders: []Folder{{ID: "studio", Name: "Studio", ParentID: ""}}, Documents: []Document{{ID: "welcome", Name: "Welcome", FolderID: "studio", CreatedAt: t, UpdatedAt: t}}}
 	if err = s.writeJournal("welcome", welcome); err != nil {
 		return nil, err
 	}

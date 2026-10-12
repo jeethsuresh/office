@@ -73,7 +73,7 @@ export function DocEditor({
         CollaborationCaret.configure({ provider: session, user }),
         Placeholder.configure({
           placeholder: compact
-            ? "A thought belongs here…"
+            ? "Write a note…"
             : "Start writing. Try # for a heading, or **bold** for emphasis.",
         }),
       ],
@@ -305,8 +305,7 @@ export function DocEditor({
       <div className="doc-paper">
         <EditorContent editor={editor} />
         <div className="doc-footnote">
-          {editor.getText().trim().split(/\s+/).filter(Boolean).length} words{" "}
-          <span>·</span> Markdown feels at home here
+          {editor.getText().trim().split(/\s+/).filter(Boolean).length} words
         </div>
       </div>
       {slash && (
@@ -330,7 +329,7 @@ export function DocEditor({
         />
       )}
       {markdown !== null && (
-        <Modal title="A little Markdown" onClose={() => setMarkdown(null)}>
+        <Modal title="Insert Markdown" onClose={() => setMarkdown(null)}>
           <p className="muted">
             Edit this Markdown and insert it at your cursor, or download the
             current note.

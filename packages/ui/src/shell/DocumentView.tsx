@@ -57,11 +57,7 @@ function Peek({
         }
       >
         <Plus size={15} />
-        <span>
-          {direction === "previous"
-            ? "A new beginning"
-            : "Room for another idea"}
-        </span>
+        <span>Add block</span>
       </button>
     );
   const kind = block.get("kind") as BlockKind;
@@ -80,7 +76,7 @@ function Peek({
             .join(" / ")
         : kind === "sheet"
           ? `${block.get("rows").length} rows · ${block.get("columns").length} columns`
-          : `${(block.get("shapes") as Y.Map<SharedRecord>).size} objects on an open canvas`;
+          : `${(block.get("shapes") as Y.Map<SharedRecord>).size} objects`;
   const shapes = kind === "canvas" ? shapeValues(block.get("shapes")) : [];
   return (
     <button
@@ -201,7 +197,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     return (
       <div className="loading-document">
         <div className="loading-mark" />
-        <p>Making a little space…</p>
+        <p>Loading document…</p>
       </div>
     );
   return (
@@ -231,18 +227,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 <PenTool />
                 <Layout />
               </div>
-              <span className="eyebrow">
-                A BLANK PAGE. A WORLD OF POSSIBILITY.
-              </span>
-              <h1>
-                Where will your
-                <br />
-                thinking take you?
-              </h1>
-              <p>
-                A note to start. A canvas to explore.
-                <br />A story to bring it all together.
-              </p>
+              <h1>Empty document</h1>
               <button
                 className="primary-button"
                 onClick={() => openInsert("start")}
@@ -339,11 +324,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
               </section>
             );
           })}
-          {list.length > 0 && (
-            <div className="document-end">
-              <span>A little more room to think.</span>
-            </div>
-          )}
         </div>
         <Minimap
           blocks={list}
@@ -359,13 +339,10 @@ export function DocumentView({ session }: { session: DocumentSession }) {
         />
         {insert !== null && (
           <Modal
-            title="What comes next?"
+            title="Add block"
             onClose={() => setInsert(null)}
             className="add-block-modal"
           >
-            <p className="muted">
-              Three ways to think. One connected document.
-            </p>
             {list.length > 0 && (
               <label className="field-label">
                 Block position
@@ -436,9 +413,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 );
               })}
             </div>
-            <p className="modal-footnote">
-              Add them in any order. Make it your own.
-            </p>
           </Modal>
         )}
         {deleteID && (
@@ -458,7 +432,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 className="secondary-button"
                 onClick={() => setDeleteID(null)}
               >
-                Keep it
+                Cancel
               </button>
               <button
                 className="danger-button"

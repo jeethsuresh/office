@@ -209,7 +209,7 @@ export function ReferencePicker({
     >
       <div className="reference-picker-heading">
         <Link2 size={15} />
-        <span>Connect a thought</span>
+        <span>Insert link</span>
         {onClose && (
           <button aria-label="Close link picker" onClick={onClose}>
             <X size={14} />

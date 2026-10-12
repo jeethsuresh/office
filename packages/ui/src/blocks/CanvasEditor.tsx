@@ -318,7 +318,7 @@ export function CanvasEditor({
       return;
     }
     if (tool === "pin") {
-      setPin({ ...p, label: "A little anchor", link: "" });
+      setPin({ ...p, label: "", link: "" });
       return;
     }
     const shape: Shape = {
@@ -670,8 +670,8 @@ export function CanvasEditor({
               : tool === "select"
                 ? "Select & move · double-click to add a label"
                 : tool === "hand"
-                  ? "Drag to explore your workspace"
-                  : "Draw something unexpected"}
+                  ? "Drag to pan"
+                  : "Drag to draw"}
           </span>
           <span>
             {Math.round((1200 / view.w) * 100)}% <i>·</i> {shapes.size} objects
@@ -680,7 +680,7 @@ export function CanvasEditor({
       </div>
       {text && (
         <Modal
-          title={text.id ? "Edit a label" : "Put a thought on the canvas"}
+          title={text.id ? "Edit label" : "Add label"}
           onClose={() => setText(null)}
         >
           <textarea
@@ -720,9 +720,7 @@ export function CanvasEditor({
                   height: 56,
                   color,
                   fill: "none",
-                  text:
-                    text.value.slice(0, slash.from).trim() ||
-                    "Connected thought",
+                  text: text.value.slice(0, slash.from).trim() || "Pin",
                   link: urn,
                 });
                 setText(null);
@@ -772,6 +770,7 @@ export function CanvasEditor({
               autoFocus
               className="field"
               aria-label="Pin name"
+              placeholder="Pin name"
               value={pin.label}
               onChange={(event) => {
                 setPin({ ...pin, label: event.target.value });
@@ -799,9 +798,7 @@ export function CanvasEditor({
                 setPin({
                   ...pin,
                   link,
-                  label:
-                    pin.label.replace(/\/link$/, "").trim() ||
-                    "Connected thought",
+                  label: pin.label.replace(/\/link$/, "").trim() || "Pin",
                 });
                 setPinPicker(false);
               }}

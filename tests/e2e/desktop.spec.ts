@@ -149,7 +149,7 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await expect(page.getByText("All changes saved")).toBeVisible();
     await expect(
       page.getByLabel("Document text", { exact: true }),
-    ).toContainText("Good things happen");
+    ).toContainText("Write and format text");
     const documentMap = page.getByRole("complementary", {
       name: "Document minimap",
       exact: true,
@@ -172,10 +172,10 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await expect(
       page.getByRole("dialog", { name: "Delete this block?", exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Keep it", exact: true }).click();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
     await expect(
       page.getByLabel("Document text", { exact: true }),
-    ).toContainText("Good things happen");
+    ).toContainText("Write and format text");
     const originalOrder = await documentMap
       .locator(".minimap-segment")
       .evaluateAll((elements) =>
@@ -293,13 +293,13 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await expect(browser.locator(".browser-card")).toHaveCount(1);
     await browser
       .getByRole("button", {
-        name: "Open document: A place for connected thoughts",
+        name: "Open document: Welcome",
         exact: true,
       })
       .click();
     await expect(
       page.getByLabel("Document text", { exact: true }),
-    ).toContainText("Good things happen");
+    ).toContainText("Write and format text");
     await page
       .getByRole("button", { name: "Fullscreen note", exact: true })
       .click();

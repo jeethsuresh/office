@@ -92,7 +92,6 @@ function TitleSlide({ slide, readOnly }: SlideProps) {
   useShared(slide);
   return (
     <div className="title-slide">
-      <span className="slide-eyebrow">A NEW PERSPECTIVE</span>
       <SharedText
         text={slide.get("title")}
         label="Slide title"

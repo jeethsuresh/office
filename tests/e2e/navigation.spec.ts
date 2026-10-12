@@ -221,9 +221,7 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
     .getByRole("button", { name: "Exit fullscreen", exact: true })
     .click();
   await expect(page.locator(".editor-fullscreen")).toHaveCount(0);
-  await expect(page.locator(".slide-card.current")).toContainText(
-    "A NEW PERSPECTIVE",
-  );
+  await expect(page.locator(".slide-card.current .title-slide")).toBeVisible();
   await expect(
     page.getByLabel("Slide title", { exact: true }).first(),
   ).toHaveValue("Focused slide title");

@@ -14,6 +14,7 @@
   --line: #e6e4dd;
   --sidebar: #eeede7;
   --ink: #373a3b;
+  --placeholder: #c9c9c9;
 }
 * {
   box-sizing: border-box;
@@ -62,6 +63,14 @@ a {
 }
 textarea {
   resize: vertical;
+}
+input::placeholder,
+textarea::placeholder,
+#portal input::placeholder,
+#portal textarea::placeholder {
+  color: var(--placeholder);
+  -webkit-text-fill-color: var(--placeholder);
+  opacity: 1;
 }
 ::selection {
   background: #e7d79e;
@@ -221,13 +230,6 @@ p {
   border-radius: 8px;
   color: #68785f;
   font-family: Georgia, serif;
-}
-.workspace-label small {
-  display: block;
-  font-size: 9px;
-  font-weight: 400;
-  color: #94978a;
-  margin-top: 5px;
 }
 .local-pill {
   margin-left: auto;
@@ -407,20 +409,6 @@ p {
 .sidebar-bottom {
   margin-top: auto;
   padding: 14px 5px 0;
-}
-.sidebar-note {
-  display: flex;
-  gap: 10px;
-  padding: 16px 0;
-  color: #87937a;
-  font-size: 11px;
-  border-top: 1px solid #deded4;
-}
-.sidebar-note small {
-  display: block;
-  font-size: 9px;
-  color: #a1a697;
-  margin-top: 5px;
 }
 .sidebar-footer {
   display: flex;
@@ -822,7 +810,7 @@ p {
   content: attr(data-placeholder);
   float: left;
   pointer-events: none;
-  color: #b0b2a4;
+  color: var(--placeholder);
   height: 0;
 }
 .doc-footnote {
@@ -1494,15 +1482,6 @@ p {
     opacity: 0.8;
   }
 }
-.document-end {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  font-size: 10px;
-  color: #b1b1a2;
-  padding: 12px;
-}
 .empty-document,
 .workspace-empty {
   display: flex;
@@ -1690,12 +1669,6 @@ p {
   height: 39px;
   background: color-mix(in srgb, var(--block-color) 12%, transparent);
   border-radius: 7px;
-}
-.modal-footnote {
-  font-size: 10px;
-  color: #aaa996;
-  margin: 20px 0 0;
-  line-height: 1.7;
 }
 .markdown-input {
   width: 100%;
@@ -2178,13 +2151,6 @@ p {
   .compact .canvas-caption {
     font-size: 6px;
   }
-  .document-end {
-    font-size: 8px;
-    gap: 9px;
-  }
-  .document-end .text-button {
-    font-size: 8px;
-  }
   .modal {
     padding: 20px;
     border-radius: 10px;
@@ -2301,13 +2267,9 @@ p {
 .block-heading,
 .block-peek,
 .block-boundary-add,
-.document-end,
 .canvas-caption,
 .slide-navigation {
   flex-shrink: 0;
-}
-.document-end {
-  margin: 8px 0 0;
 }
 .tool-list {
   display: flex;
@@ -2553,8 +2515,7 @@ p {
   .topbar {
     height: 46px;
   }
-  .document-caption,
-  .document-end {
+  .document-caption {
     display: none;
   }
   .block-viewport {

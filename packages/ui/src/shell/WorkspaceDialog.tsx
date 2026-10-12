@@ -74,8 +74,8 @@ export function WorkspaceDialog({
     <Modal
       title={
         editing
-          ? `Make this ${document ? "document" : "folder"} your own`
-          : `A new ${document ? "document" : "folder"}`
+          ? `Edit ${document ? "document" : "folder"}`
+          : `New ${document ? "document" : "folder"}`
       }
       onClose={onClose}
     >
@@ -90,7 +90,7 @@ export function WorkspaceDialog({
           <input
             autoFocus
             className="field"
-            placeholder={document ? "Untitled possibility" : "A new collection"}
+            placeholder={document ? "Document name" : "Folder name"}
             maxLength={120}
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -158,7 +158,7 @@ export function WorkspaceDialog({
               className="text-button"
               onClick={() => setDeleting(false)}
             >
-              Keep it
+              Cancel
             </button>
           </div>
         )}

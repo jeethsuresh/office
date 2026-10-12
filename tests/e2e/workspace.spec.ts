@@ -91,7 +91,9 @@ test("Office opens a sortable list/icon folder browser with history, creation, a
     await view
       .getByRole("button", { name: "Open folder: Nested", exact: true })
       .click();
-    await expect(view.getByText("Room for something new.")).toBeVisible();
+    await expect(
+      view.getByRole("heading", { name: "Empty folder", exact: true }),
+    ).toBeVisible();
     await view
       .getByRole("button", { name: "Up one folder", exact: true })
       .click();

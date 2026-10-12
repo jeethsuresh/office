@@ -10,7 +10,6 @@ import {
   Plus,
   Search,
   PanelLeftClose,
-  Sparkles,
 } from "lucide-react";
 import {
   relativeTime,
@@ -163,9 +162,7 @@ export function Sidebar({
       </div>
       <div className="workspace-label">
         <span className="workspace-avatar">J</span>
-        <div>
-          Your workspace<small>A little room for big ideas</small>
-        </div>
+        <div>Your workspace</div>
         <span className="local-pill">LOCAL</span>
       </div>
       <label className="search-box">
@@ -219,26 +216,14 @@ export function Sidebar({
             {folders("", 0)}
             {docs("", 0)}
             {!workspace.documents.length && (
-              <p className="tree-empty">
-                Make a little space.
-                <br />
-                Create your first document.
-              </p>
+              <p className="tree-empty">No documents</p>
             )}
           </>
         )}
       </nav>
       <div className="sidebar-bottom">
-        <div className="sidebar-note">
-          <Sparkles size={17} />
-          <span>
-            Follow your thinking.
-            <small>Notes, canvases & stories, together.</small>
-          </span>
-        </div>
         <div className="sidebar-footer">
           <span>OFFICE / 0.1</span>
-          <span>Made for possibility</span>
         </div>
       </div>
     </aside>

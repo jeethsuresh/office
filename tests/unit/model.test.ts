@@ -192,7 +192,7 @@ describe("shared office model", () => {
     Y.applyUpdate(doc, seed);
     expect(blocks(doc).length).toBe(3);
     expect(blocks(doc).get(0).get("content").toString()).toContain(
-      "Good things happen",
+      "Write and format text",
     );
     expect(blocks(doc).get(1).get("shapes").size).toBe(6);
     expect(blocks(doc).get(2).get("slides").length).toBe(2);

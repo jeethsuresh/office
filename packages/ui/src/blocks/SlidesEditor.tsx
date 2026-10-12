@@ -298,7 +298,7 @@ export function SlidesEditor({
           {!list.length && (
             <div className="empty-slides">
               <Layout size={32} />
-              <p>Your next story starts here.</p>
+              <p>No slides</p>
               <button className="secondary-button" onClick={() => add("title")}>
                 <Plus size={16} />
                 Add a title slide

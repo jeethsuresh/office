@@ -318,7 +318,7 @@ export function App() {
                     document && setAction({ kind: "document", item: document })
                   }
                 >
-                  {document?.name ?? "A fresh start"}
+                  {document?.name ?? "Document"}
                 </button>
               </>
             )}
@@ -353,13 +353,10 @@ export function App() {
         {route.view === "document" && (
           <div className="document-caption">
             <span>
-              <FileText size={13} />{" "}
-              {document ? "A living document" : "Your workspace"}
+              <FileText size={13} /> Document
             </span>
             <span>
-              {document
-                ? `Updated ${relativeTime(document.updatedAt)}`
-                : "Everything starts with a little space"}
+              {document ? `Updated ${relativeTime(document.updatedAt)}` : ""}
             </span>
           </div>
         )}
@@ -383,9 +380,7 @@ export function App() {
           />
         ) : (
           <div className="workspace-empty">
-            <h1>
-              {loaded ? "Make room for your ideas." : "Opening your workspace…"}
-            </h1>
+            <h1>{loaded ? "Document not found" : "Loading workspace…"}</h1>
             {loaded && (
               <button
                 className="primary-button"
@@ -412,10 +407,10 @@ export function App() {
         />
       )}
       {share && (
-        <Modal title="Better together" onClose={() => setShare(false)}>
+        <Modal title="Share document" onClose={() => setShare(false)}>
           <p className="muted">
-            Open this document in another browser on this server. Notes,
-            drawings, and slides update as you work.
+            Open this document in another browser on this server to edit
+            together.
           </p>
           <label className="field-label">
             Your name

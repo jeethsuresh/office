@@ -20,22 +20,22 @@ export type Shape = {
 export const BLOCK_META = {
   doc: {
     name: "Doc",
-    description: "Write, think, and make a little sense of things.",
+    description: "Rich text and Markdown.",
     color: "#4f83cf",
   },
   canvas: {
     name: "Canvas",
-    description: "Give your ideas room to wander.",
+    description: "Shapes, drawings, and pins.",
     color: "#cf6658",
   },
   slides: {
     name: "Slides",
-    description: "Turn a thought into a story, one slide at a time.",
+    description: "Slides with text or canvas content.",
     color: "#d0a536",
   },
   sheet: {
     name: "Sheet",
-    description: "Work with numbers, formulas, and connected cells.",
+    description: "Cells, formulas, and references.",
     color: "#6d947d",
   },
 } as const;
@@ -116,7 +116,7 @@ export function createBlock(
       {
         doc: "Untitled note",
         canvas: "Untitled canvas",
-        slides: "Untitled story",
+        slides: "Untitled slides",
         sheet: "Untitled sheet",
       }[kind],
   });
@@ -166,16 +166,8 @@ export function createSlide(
 ): SharedRecord {
   const slide = createRecord({ id, layout });
   const title = new Y.Text();
-  title.insert(
-    0,
-    layout === "title" ? "A new perspective" : "The next chapter",
-  );
   slide.set("title", title);
   const subtitle = new Y.Text();
-  subtitle.insert(
-    0,
-    layout === "title" ? "Every great story starts with an idea." : "",
-  );
   slide.set("subtitle", subtitle);
   slide.set("contentKind", "doc");
   slide.set("content", new Y.XmlFragment());

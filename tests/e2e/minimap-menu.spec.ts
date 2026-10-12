@@ -277,7 +277,7 @@ test("mobile hold opens deletion without navigating, while taps and drags stay d
         .getByRole("dialog")
         .getByText("Delete this drawing", { exact: true }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Keep it", exact: true }).tap();
+    await page.getByRole("button", { name: "Cancel", exact: true }).tap();
     await map
       .getByRole("button", {
         name: "Go to canvas block: Delete this drawing",

@@ -152,7 +152,6 @@ export function WorkspaceBrowser({
     <section className="workspace-browser" aria-label="Workspace browser">
       <div className="browser-heading">
         <div>
-          <span className="eyebrow">A HOME FOR YOUR IDEAS</span>
           <h1>{current?.name ?? "Your workspace"}</h1>
           <p>
             {items.length} {items.length === 1 ? "item" : "items"}
@@ -264,9 +263,7 @@ export function WorkspaceBrowser({
         {!visible.length ? (
           <div className="browser-empty">
             <Folder size={38} />
-            <h2>
-              {search ? "Nothing matches yet." : "Room for something new."}
-            </h2>
+            <h2>{search ? "No matching items" : "Empty folder"}</h2>
             <p>
               {search
                 ? "Try another name in this folder."
