@@ -37,6 +37,59 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await expect(
       page.getByLabel("Document text", { exact: true }),
     ).toContainText("Good things happen");
+    const documentMap = page.getByRole("complementary", {
+      name: "Document minimap",
+      exact: true,
+    });
+    const originalOrder = await documentMap
+      .locator(".minimap-segment")
+      .evaluateAll((elements) =>
+        elements.map((element) => (element as HTMLElement).dataset.mapBlock),
+      );
+    const source = (await documentMap
+      .locator(".minimap-number")
+      .first()
+      .boundingBox())!;
+    const destination = (await documentMap
+      .locator(".minimap-segment")
+      .last()
+      .boundingBox())!;
+    await page.mouse.move(
+      source.x + source.width / 2,
+      source.y + source.height / 2,
+    );
+    await page.mouse.down();
+    await page.mouse.move(
+      destination.x + destination.width / 2,
+      destination.y + destination.height - 2,
+      { steps: 12 },
+    );
+    await page.mouse.up();
+    await expect
+      .poll(() =>
+        documentMap
+          .locator(".minimap-segment")
+          .evaluateAll((elements) =>
+            elements.map(
+              (element) => (element as HTMLElement).dataset.mapBlock,
+            ),
+          ),
+      )
+      .toEqual([...originalOrder.slice(1), originalOrder[0]]);
+    await documentMap
+      .getByRole("button", { name: "Undo block change", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        documentMap
+          .locator(".minimap-segment")
+          .evaluateAll((elements) =>
+            elements.map(
+              (element) => (element as HTMLElement).dataset.mapBlock,
+            ),
+          ),
+      )
+      .toEqual(originalOrder);
     url = page.url();
     const security = await app.evaluate(({ BrowserWindow }) => {
       const prefs = (
@@ -58,6 +111,30 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     expect(await page.evaluate(() => (window as any).office.desktop)).toBe(
       true,
     );
+    await documentMap
+      .getByRole("button", { name: /Go to slides block/ })
+      .click();
+    await page
+      .getByRole("button", { name: "Add title slide", exact: true })
+      .click();
+    await expect(page.locator(".slide-card").last()).toHaveClass(/current/);
+    const carousel = page.getByRole("navigation", {
+      name: "Slide carousel",
+      exact: true,
+    });
+    await carousel
+      .getByRole("button", { name: "Go to slide 1", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        page.locator(".slide-track").evaluate((element) => element.scrollLeft),
+      )
+      .toBeLessThan(2);
+    await carousel
+      .getByRole("button", { name: "Next carousel slide", exact: true })
+      .click();
+    await expect(page.locator(".slide-card").nth(1)).toHaveClass(/current/);
+    await documentMap.getByRole("button", { name: /Go to doc block/ }).click();
     await page
       .getByRole("button", { name: "Open workspace", exact: true })
       .click();

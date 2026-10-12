@@ -10,6 +10,9 @@ import {
 } from "lucide-react";
 import {
   blocks as getBlocks,
+  blockMoves,
+  orderedBlocks,
+  moveBlock,
   addBlock,
   removeBlock,
   makeUndoManager,
@@ -134,7 +137,8 @@ function Peek({
 }
 export function DocumentView({ session }: { session: DocumentSession }) {
   const shared = useShared(getBlocks(session.doc));
-  const list = shared.toArray();
+  const moves = useShared(blockMoves(session.doc));
+  const list = orderedBlocks(session.doc);
   const blockIDs = list.map((block) => block.get("id")).join(",");
   const state = useSession(session);
   const [active, setActive] = useState("");
@@ -154,10 +158,19 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     setInsertAnchor(active);
     setInsert(position);
   }
+  function insertAtGap(before: string | null) {
+    setInsertAnchor(before ?? active);
+    setInsert(before ? "before" : "end");
+  }
+  function reorder(id: string, before: string | null) {
+    undo.current?.stopCapturing();
+    moveBlock(session.doc, id, before);
+    undo.current?.stopCapturing();
+  }
   useEffect(() => {
-    undo.current = makeUndoManager(shared);
+    undo.current = makeUndoManager([shared, moves]);
     return () => undo.current?.destroy();
-  }, [shared]);
+  }, [shared, moves]);
   function navigate(id: string, slide?: string) {
     setActive(id);
     session.setActiveBlock(id);
@@ -183,7 +196,14 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     );
   return (
     <EditorFullscreenProvider
-      navigation={{ blocks: list, active, activeSlides, onNavigate: navigate }}
+      navigation={{
+        blocks: list,
+        active,
+        activeSlides,
+        onNavigate: navigate,
+        onMove: reorder,
+        onAddAt: insertAtGap,
+      }}
     >
       <div className="document-view">
         <div className="block-viewport">
@@ -306,6 +326,8 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           active={active}
           activeSlides={activeSlides}
           onNavigate={navigate}
+          onMove={reorder}
+          onAddAt={insertAtGap}
           onAdd={() => openInsert("after")}
           onDelete={() => setDeleteID(active)}
           onUndo={() => undo.current?.undo()}
@@ -333,8 +355,18 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                   <option value="start">Beginning of document</option>
                   {insertAnchor && (
                     <>
-                      <option value="before">Before selected block</option>
-                      <option value="after">After selected block</option>
+                      <option value="before">
+                        Before{" "}
+                        {list
+                          .find((block) => block.get("id") === insertAnchor)
+                          ?.get("title") || "selected block"}
+                      </option>
+                      <option value="after">
+                        After{" "}
+                        {list
+                          .find((block) => block.get("id") === insertAnchor)
+                          ?.get("title") || "selected block"}
+                      </option>
                     </>
                   )}
                   <option value="end">End of document</option>
@@ -354,7 +386,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     }
                     onClick={() => {
                       undo.current?.stopCapturing();
-                      const current = getBlocks(session.doc).toArray();
+                      const current = orderedBlocks(session.doc);
                       const anchor = current.findIndex(
                         (block) => block.get("id") === insertAnchor,
                       );
@@ -366,7 +398,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                             : anchor + (insert === "after" ? 1 : 0);
                       const block = addBlock(session.doc, kind, index);
                       setInsert(null);
-                      setTimeout(() => navigate(block.get("id")), 50);
+                      navigate(block.get("id"));
                     }}
                   >
                     <span className="choice-icon">

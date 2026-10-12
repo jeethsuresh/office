@@ -41,43 +41,74 @@ export function SlidesEditor({
   const slides = block.get("slides") as Y.Array<SharedRecord>;
   useShared(slides);
   const track = useRef<HTMLDivElement>(null);
+  const dots = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
   const activeIndex = useRef(active);
+  const scrollingTo = useRef<string | null>(null);
   activeIndex.current = active;
   const reportActive = useRef(onActiveSlide);
   reportActive.current = onActiveSlide;
   const [present, setPresent] = useState(false);
   const undo = useRef<Y.UndoManager | null>(null);
   const list = slides.toArray();
+  useLayoutEffect(() => {
+    const element = dots.current;
+    const dot = element?.querySelectorAll<HTMLButtonElement>("button")[active];
+    if (!element || !dot) return;
+    const bounds = element.getBoundingClientRect();
+    const selected = dot.getBoundingClientRect();
+    if (selected.left < bounds.left)
+      element.scrollLeft += selected.left - bounds.left;
+    else if (selected.right > bounds.right)
+      element.scrollLeft += selected.right - bounds.right;
+  }, [active, list.length]);
   useEffect(() => {
     undo.current = makeUndoManager(slides);
     return () => undo.current?.destroy();
   }, [slides]);
-  function go(index: number) {
+  function go(index: number, behavior: ScrollBehavior = "instant") {
     const current = slides.toArray();
     index = Math.max(0, Math.min(index, current.length - 1));
     setActive(index);
     activeIndex.current = index;
-    position(index);
+    scrollingTo.current =
+      behavior === "smooth" &&
+      !matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? (current[index]?.get("id") ?? null)
+        : null;
+    position(index, behavior);
     const slide = current[index];
     if (slide) {
       onActiveSlide(slide.get("id"));
     }
   }
-  function position(index: number) {
+  function position(index: number, behavior: ScrollBehavior = "instant") {
     const element = track.current;
     const card = element?.querySelectorAll<HTMLElement>(".slide-card")[index];
-    if (element && card && !card.classList.contains("editor-fullscreen"))
+    if (element && card && !card.classList.contains("editor-fullscreen")) {
+      const left =
+        card.offsetLeft - parseFloat(getComputedStyle(element).paddingLeft);
+      if (Math.abs(element.scrollLeft - left) < 2) scrollingTo.current = null;
       element.scrollTo({
-        left:
-          card.offsetLeft - parseFloat(getComputedStyle(element).paddingLeft),
-        behavior: "instant",
+        left,
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : behavior,
       });
+    }
   }
   useLayoutEffect(() => {
     const element = track.current;
     if (!element) return;
-    const align = () => position(activeIndex.current);
+    const align = () => {
+      const destination = slides
+        .toArray()
+        .findIndex((slide) => slide.get("id") === scrollingTo.current);
+      position(
+        destination >= 0 ? destination : activeIndex.current,
+        destination >= 0 ? "smooth" : "instant",
+      );
+    };
     align();
     const resize = new ResizeObserver(align);
     resize.observe(element);
@@ -96,6 +127,17 @@ export function SlidesEditor({
         cards.some((card) => card.classList.contains("editor-fullscreen"))
       )
         return;
+      const destination = slides
+        .toArray()
+        .findIndex((slide) => slide.get("id") === scrollingTo.current);
+      if (destination >= 0) {
+        const left = cards[destination]?.offsetLeft - padding;
+        if (Math.abs(element.scrollLeft - left) >= 2) {
+          position(destination, "smooth");
+          return;
+        }
+      }
+      scrollingTo.current = null;
       let nearest = 0;
       cards.forEach((card, index) => {
         if (
@@ -114,12 +156,19 @@ export function SlidesEditor({
       clearTimeout(timer);
       timer = setTimeout(settle, 180);
     };
+    const interrupt = () => {
+      scrollingTo.current = null;
+    };
     element.addEventListener("scroll", scrolling);
     element.addEventListener("scrollend", settle);
+    element.addEventListener("wheel", interrupt, { passive: true });
+    element.addEventListener("touchmove", interrupt, { passive: true });
     return () => {
       clearTimeout(timer);
       element.removeEventListener("scroll", scrolling);
       element.removeEventListener("scrollend", settle);
+      element.removeEventListener("wheel", interrupt);
+      element.removeEventListener("touchmove", interrupt);
     };
   }, [slides]);
   useLayoutEffect(() => {
@@ -149,7 +198,7 @@ export function SlidesEditor({
     const slide = addSlide(block, layout);
     setTimeout(() => {
       const i = slides.toArray().indexOf(slide);
-      go(i);
+      go(i, "smooth");
     }, 30);
   }
   const slide = list[Math.min(active, list.length - 1)];
@@ -247,14 +296,38 @@ export function SlidesEditor({
               ? `${String(active + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`
               : "No slides yet"}
           </span>
-          <div className="slide-dots" aria-hidden="true">
-            {list.map((s, i) => (
-              <span
-                className={active === i ? "active" : ""}
-                key={s.get("id")}
-              />
-            ))}
-          </div>
+          <nav className="slide-carousel" aria-label="Slide carousel">
+            <button
+              className="icon-button"
+              aria-label="Previous carousel slide"
+              disabled={active === 0 || !list.length}
+              onClick={() => go(active - 1, "smooth")}
+            >
+              <ArrowLeft size={15} />
+            </button>
+            <div className="slide-dots" ref={dots}>
+              {list.map((s, i) => (
+                <button
+                  className={active === i ? "active" : ""}
+                  key={s.get("id")}
+                  aria-label={`Go to slide ${i + 1}`}
+                  aria-current={active === i ? "true" : undefined}
+                  title={s.get("title")?.toString() || `Slide ${i + 1}`}
+                  onClick={() => go(i, "smooth")}
+                >
+                  <span />
+                </button>
+              ))}
+            </div>
+            <button
+              className="icon-button"
+              aria-label="Next carousel slide"
+              disabled={active >= list.length - 1}
+              onClick={() => go(active + 1, "smooth")}
+            >
+              <ArrowRight size={15} />
+            </button>
+          </nav>
         </div>
       </div>
       {present && slide && Presentation && (

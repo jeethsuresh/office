@@ -110,3 +110,19 @@ The embedded editor and toolbar had independent 310px height caps inside a talle
 - [x] Verify existing desktop/mobile workspace workflows and packaged Electron browsing; rebuild the update for publication.
 
 - Final result: typecheck and the production/native package build pass. All seven targeted workspace/Electron acceptance tests pass, including sidebar absence after navigation/reload, sidebar restoration on document open, and folder-search keyboard focus. The rebuilt native app also passes its startup/shutdown and persistence checks. Publish the completed change to `origin/main`.
+
+## Minimap editing and slide carousel — 2026-10-11
+
+- [x] Add title dragging to reorder blocks, preserving shared content and mounted editors. Store moves as CRDT operations and verify concurrent moves/edits and undo.
+- [x] Expose insertion buttons at minimap gaps, retaining the clicked neighbor as the insertion anchor. Support desktop, touch, keyboard, and expanded fullscreen navigation.
+- [x] Position full-title hover labels beside the actual minimap bounds, including wide and fullscreen maps.
+- [x] Animate navigation into newly added slides; make carousel dots clickable and add previous/next arrows alongside them.
+- [x] Verify drag/drop, gap insertion, persistence/multiplayer, tooltip bounds, slide animation/carousel, mobile, and native fullscreen; rebuild Electron and update docs for publication.
+
+Ordering design: keep the existing Yjs block records in place and append small ID-based move operations to a separate shared array. Replay operations over the block list to derive visible order. This avoids cloning or reinserting integrated Yjs editor content during a drag and permits concurrent content edits to continue on the same records.
+
+- Verification checkpoint: eight model tests pass, including move/insert/edit convergence, record identity, replay, and local undo retaining remote changes. Four new real-browser checks pass for mouse/touch dragging, live peer edits during a drag, gap insertion, keyboard moves, fullscreen cancellation/insertion, and carousel navigation. Slide animation checks observe multiple intermediate scroll positions on desktop and mobile; reduced motion is respected. The existing 11 navigation checks pass. Rebuilding the native app before running all 28 acceptance tests.
+
+- Rapid-addition checkpoint: the first full run passed 27 checks and exposed a stale scroll-end event selecting the previous slide during repeated additions. Smooth navigation now keeps its requested slide ID until arrival; wheel/touch gestures can interrupt it. Block insertion selects the new block in the same render, avoiding a delayed selection changing the next insertion anchor. All 18 slide/minimap/navigation checks pass after these fixes; rebuilding the final package and rerunning the full suite.
+
+- Final result: typecheck, eight model tests, production/native package build, and all 28 acceptance tests pass. Native checks use the rebuilt packaged executable and now exercise drag/undo and carousel controls as well as existing lifecycle/fullscreen/persistence flows. Existing collaboration, workspace browsing, presence, and mobile checks pass. README, architecture, and verification notes are updated. The isolated fixture left by the timed-out check was removed without changing other workspaces. Publish the completed change to GitHub `origin/main`; quit/reopen Office to load the new bundle.

@@ -14,6 +14,8 @@ export type DocumentNavigation = {
   active: string;
   activeSlides: Record<string, string>;
   onNavigate: (block: string, slide?: string) => void;
+  onMove?: (block: string, before: string | null) => void;
+  onAddAt?: (before: string | null) => void;
 };
 export const DocumentNavigationContext =
   createContext<DocumentNavigation | null>(null);
@@ -29,13 +31,11 @@ export function navigationItems(blocks: SharedRecord[]): NavigationItem[] {
     };
     const slides = block.get("slides") as Y.Array<SharedRecord> | undefined;
     if (base.kind !== "slides" || !slides?.length) return [base];
-    return slides
-      .toArray()
-      .map((slide, i) => ({
-        ...base,
-        slide: slide.get("id"),
-        title: slide.get("title")?.toString() || `Slide ${i + 1}`,
-        number: i + 1,
-      }));
+    return slides.toArray().map((slide, i) => ({
+      ...base,
+      slide: slide.get("id"),
+      title: slide.get("title")?.toString() || `Slide ${i + 1}`,
+      number: i + 1,
+    }));
   });
 }

@@ -269,6 +269,13 @@ export function EditorFullscreenProvider({
     });
   }
   useLayoutEffect(() => {
+    const focused = current.current;
+    if (!focused || !navigation.active) return;
+    const block =
+      focused.element.closest<HTMLElement>("[data-block-id]")?.dataset.blockId;
+    if (block && block !== navigation.active) navigate(navigation.active);
+  }, [navigation.active]);
+  useLayoutEffect(() => {
     if (!target) return;
     const root = target.element;
     const siblings: { element: HTMLElement; inert: boolean }[] = [];
@@ -309,10 +316,11 @@ export function EditorFullscreenProvider({
       const root = current.current?.element;
       if (
         !root ||
-        root.querySelector("dialog[open], [role=dialog][aria-modal=true]")
+        container.querySelector("dialog[open], [role=dialog][aria-modal=true]")
       )
         return;
       if (event.key === "Escape") {
+        if (container.querySelector(".minimap.is-dragging")) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         void exit();
@@ -366,7 +374,7 @@ export function EditorFullscreenProvider({
     };
   }, [focusing]);
   useEffect(() => {
-    if (target && !target.element.isConnected) void exit();
+    if (current.current && !current.current.element.isConnected) void exit();
   });
   return (
     <DocumentNavigationContext.Provider value={navigation}>

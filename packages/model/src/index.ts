@@ -36,6 +36,61 @@ export const LOCAL_ORIGIN = "office-local";
 export function blocks(doc: Y.Doc): Y.Array<SharedRecord> {
   return doc.getArray<SharedRecord>("blocks");
 }
+export type BlockMove = {
+  block: string;
+  before: string | null;
+  after: string | null;
+};
+export function blockMoves(doc: Y.Doc): Y.Array<BlockMove> {
+  return doc.getArray<BlockMove>("blockMoves");
+}
+export function orderedBlocks(doc: Y.Doc): SharedRecord[] {
+  const result = blocks(doc).toArray();
+  for (const move of blockMoves(doc).toArray()) {
+    const index = result.findIndex((block) => block.get("id") === move.block);
+    if (index < 0) continue;
+    const [block] = result.splice(index, 1);
+    const before = result.findIndex((item) => item.get("id") === move.before);
+    const after = result.findIndex((item) => item.get("id") === move.after);
+    result.splice(
+      before >= 0
+        ? before
+        : after >= 0
+          ? after + 1
+          : move.after === null
+            ? 0
+            : result.length,
+      0,
+      block,
+    );
+  }
+  return result;
+}
+export function moveBlock(
+  doc: Y.Doc,
+  id: string,
+  beforeID: string | null,
+): boolean {
+  const list = orderedBlocks(doc);
+  const index = list.findIndex((block) => block.get("id") === id);
+  if (index < 0 || beforeID === id) return false;
+  const remaining = list.filter((block) => block.get("id") !== id);
+  const before = remaining.findIndex((block) => block.get("id") === beforeID);
+  const target = before < 0 ? remaining.length : before;
+  if (target === index) return false;
+  doc.transact(
+    () =>
+      blockMoves(doc).push([
+        {
+          block: id,
+          before: remaining[target]?.get("id") ?? null,
+          after: remaining[target - 1]?.get("id") ?? null,
+        },
+      ]),
+    LOCAL_ORIGIN,
+  );
+  return true;
+}
 export function createRecord(values: Record<string, unknown> = {}) {
   const map = new Y.Map<any>();
   for (const [key, value] of Object.entries(values)) map.set(key, value);
@@ -73,13 +128,21 @@ export function addBlock(
   title?: string,
 ) {
   const block = createBlock(kind, title);
-  doc.transact(
-    () =>
-      blocks(doc).insert(Math.max(0, Math.min(index, blocks(doc).length)), [
-        block,
-      ]),
-    LOCAL_ORIGIN,
-  );
+  const current = orderedBlocks(doc);
+  index = Math.max(0, Math.min(index, current.length));
+  doc.transact(() => {
+    const moves = blockMoves(doc);
+    if (moves.length) {
+      blocks(doc).push([block]);
+      moves.push([
+        {
+          block: block.get("id"),
+          before: current[index]?.get("id") ?? null,
+          after: current[index - 1]?.get("id") ?? null,
+        },
+      ]);
+    } else blocks(doc).insert(index, [block]);
+  }, LOCAL_ORIGIN);
   return block;
 }
 export function removeBlock(doc: Y.Doc, id: string) {
@@ -163,7 +226,9 @@ export function updateShape(
 export function shapeValues(shapes: Y.Map<SharedRecord>): Shape[] {
   return [...shapes.values()].map((shape) => shape.toJSON() as Shape);
 }
-export function makeUndoManager(type: Y.AbstractType<any>) {
+export function makeUndoManager(
+  type: Y.AbstractType<any> | Y.AbstractType<any>[],
+) {
   return new Y.UndoManager(type, {
     trackedOrigins: new Set([LOCAL_ORIGIN]),
     captureTimeout: 400,

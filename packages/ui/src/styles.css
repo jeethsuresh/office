@@ -1161,10 +1161,47 @@ p {
   padding: 0;
   background: #d3cebe;
 }
-.slide-dots span.active {
+.slide-dots button.active span {
   background: #b9a771;
   width: 18px;
   border-radius: 3px;
+}
+.slide-carousel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: auto;
+  min-width: 0;
+}
+.slide-navigation > span {
+  flex-shrink: 0;
+}
+.slide-dots {
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+  gap: 1px;
+  margin: 0;
+  padding: 3px;
+}
+.slide-dots button {
+  display: grid;
+  place-items: center;
+  padding: 5px;
+  min-width: 19px;
+  min-height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.slide-dots button span {
+  display: block;
+  pointer-events: none;
+}
+.slide-dots button:hover {
+  background: #ece6d5;
+}
+.slide-dots button.active {
+  min-width: 28px;
 }
 .slide-navigation .icon-button {
   width: 25px;
@@ -1388,6 +1425,73 @@ p {
   height: 3px;
   border-radius: 50%;
   opacity: 0.55;
+}
+.minimap.is-editable .minimap-track {
+  gap: 18px;
+}
+.minimap.is-editable .minimap-title,
+.minimap.is-editable .minimap-number {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.minimap.is-dragging .minimap-title,
+.minimap.is-dragging .minimap-number {
+  cursor: grabbing;
+}
+.minimap-segment.dragged {
+  opacity: 0.35;
+}
+.minimap-gap {
+  position: absolute;
+  bottom: -18px;
+  left: 0;
+  width: 100%;
+  height: 18px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  z-index: 2;
+}
+.minimap-gap span {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid #d9dacd;
+  border-radius: 50%;
+  background: #fffdf7;
+  color: #7d896d;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.minimap-gap:hover span,
+.minimap-gap:focus-visible span {
+  opacity: 1;
+}
+.minimap.is-dragging .minimap-gap {
+  visibility: hidden;
+}
+.minimap-segment[data-drop]:after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #799264;
+  border-radius: 2px;
+  z-index: 3;
+}
+.minimap-segment[data-drop="before"]:after {
+  top: -10px;
+}
+.minimap-segment[data-drop="after"]:after {
+  bottom: 0;
+}
+@media (hover: none) {
+  .minimap-gap span {
+    opacity: 0.8;
+  }
 }
 .document-end {
   display: flex;

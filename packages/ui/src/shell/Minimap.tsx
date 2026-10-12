@@ -1,6 +1,7 @@
 import {
   useId,
   useState,
+  useRef,
   type CSSProperties,
   type FocusEvent,
   type PointerEvent,
@@ -10,6 +11,7 @@ import { BLOCK_META, type BlockKind, type SharedRecord } from "@office/model";
 import { Plus, Trash2, Undo2 } from "lucide-react";
 import { MinimapSlides } from "./MinimapSlides";
 import { BlockPreview } from "./BlockPreview";
+import { useMinimapDrag } from "./useMinimapDrag";
 
 export function Minimap({
   blocks,
@@ -19,6 +21,8 @@ export function Minimap({
   onAdd,
   onDelete,
   onUndo,
+  onMove,
+  onAddAt,
   className = "",
   label = "Document minimap",
 }: {
@@ -29,14 +33,21 @@ export function Minimap({
   onAdd?: () => void;
   onDelete?: () => void;
   onUndo?: () => void;
+  onMove?: (block: string, before: string | null) => void;
+  onAddAt?: (before: string | null) => void;
   className?: string;
   label?: string;
 }) {
   const tooltipID = useId();
+  const track = useRef<HTMLDivElement>(null);
+  const drag = useMinimapDrag(track, onMove);
   const [tooltip, setTooltip] = useState<{
     text: string;
     key: string;
     top: number;
+    left?: number;
+    right?: number;
+    maxWidth: number;
   } | null>(null);
   function show(
     event: PointerEvent<HTMLButtonElement> | FocusEvent<HTMLButtonElement>,
@@ -45,6 +56,11 @@ export function Minimap({
   ) {
     if ("pointerType" in event && event.pointerType !== "mouse") return;
     const bounds = event.currentTarget.getBoundingClientRect();
+    const map = event.currentTarget
+      .closest(".minimap")!
+      .getBoundingClientRect();
+    const onLeft = map.left >= innerWidth - map.right;
+    const space = onLeft ? map.left - 24 : innerWidth - map.right - 24;
     setTooltip({
       text,
       key,
@@ -52,11 +68,13 @@ export function Minimap({
         12,
         Math.min(bounds.top + bounds.height / 2, innerHeight - 100),
       ),
+      left: onLeft ? undefined : map.right + 12,
+      right: onLeft ? innerWidth - map.left + 12 : undefined,
+      maxWidth: Math.min(330, Math.max(80, space)),
     });
   }
   function hint(key: string, text: string) {
     return {
-      title: text,
       "aria-describedby": tooltip?.key === key ? tooltipID : undefined,
       onPointerEnter: (event: PointerEvent<HTMLButtonElement>) =>
         show(event, key, text),
@@ -66,9 +84,16 @@ export function Minimap({
     };
   }
   return (
-    <aside className={`minimap ${className}`} aria-label={label}>
+    <aside
+      className={`minimap ${onMove || onAddAt ? "is-editable" : ""} ${drag.dragging ? "is-dragging" : ""} ${className}`}
+      aria-label={label}
+    >
       <span className="minimap-heading">MAP</span>
-      <div className="minimap-track" onScroll={() => setTooltip(null)}>
+      <div
+        className="minimap-track"
+        ref={track}
+        onScroll={() => setTooltip(null)}
+      >
         {blocks.map((block, index) => {
           const id = block.get("id") as string;
           const kind = block.get("kind") as BlockKind;
@@ -80,8 +105,17 @@ export function Minimap({
           return (
             <div
               key={id}
-              className={`minimap-segment ${slides.length ? "minimap-deck" : ""} ${active === id ? "active" : ""}`}
+              className={`minimap-segment ${slides.length ? "minimap-deck" : ""} ${active === id ? "active" : ""} ${drag.dragging === id ? "dragged" : ""}`}
               data-map-block={id}
+              data-drop={
+                drag.dragging
+                  ? drag.before === id
+                    ? "before"
+                    : drag.before === null && index === blocks.length - 1
+                      ? "after"
+                      : undefined
+                  : undefined
+              }
               style={
                 {
                   "--block-color": BLOCK_META[kind]?.color ?? "#888",
@@ -95,12 +129,37 @@ export function Minimap({
             >
               <button
                 className="minimap-block"
-                onClick={() => onNavigate(id)}
+                onClick={() => {
+                  if (drag.click()) onNavigate(id);
+                }}
+                onPointerDown={(event) => drag.start(event, id)}
+                onPointerMove={drag.move}
+                onPointerUp={drag.finish}
+                onPointerCancel={drag.cancel}
+                onLostPointerCapture={drag.cancel}
+                onKeyDown={(event) => {
+                  if (
+                    !onMove ||
+                    !event.altKey ||
+                    !["ArrowUp", "ArrowDown"].includes(event.key)
+                  )
+                    return;
+                  event.preventDefault();
+                  if (event.key === "ArrowUp" && index > 0)
+                    onMove(id, blocks[index - 1].get("id"));
+                  if (event.key === "ArrowDown" && index < blocks.length - 1)
+                    onMove(id, blocks[index + 2]?.get("id") ?? null);
+                }}
+                aria-keyshortcuts={
+                  onMove ? "Alt+ArrowUp Alt+ArrowDown" : undefined
+                }
                 aria-label={`Go to ${kind} block: ${title}`}
                 aria-current={active === id && kind !== "slides"}
                 {...hint(id, `${index + 1}. ${title}`)}
               >
-                <span>{String(index + 1).padStart(2, "0")}</span>
+                <span className="minimap-number">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
                 <span className="minimap-title">{title}</span>
                 {kind !== "slides" && <BlockPreview block={block} />}
               </button>
@@ -114,6 +173,20 @@ export function Minimap({
                   hint={hint}
                   onScroll={() => setTooltip(null)}
                 />
+              )}
+              {onAddAt && index < blocks.length - 1 && (
+                <button
+                  className="minimap-gap"
+                  aria-label={`Add block before ${blocks[index + 1].get("title") || "next block"}`}
+                  onClick={() => {
+                    setTooltip(null);
+                    onAddAt(blocks[index + 1].get("id"));
+                  }}
+                >
+                  <span>
+                    <Plus size={13} />
+                  </span>
+                </button>
               )}
             </div>
           );
@@ -158,12 +231,17 @@ export function Minimap({
           </div>
         </>
       )}
-      {tooltip && (
+      {tooltip && !drag.dragging && (
         <div
           id={tooltipID}
           role="tooltip"
           className="minimap-tooltip"
-          style={{ top: tooltip.top }}
+          style={{
+            top: tooltip.top,
+            left: tooltip.left ?? "auto",
+            right: tooltip.right ?? "auto",
+            maxWidth: tooltip.maxWidth,
+          }}
         >
           {tooltip.text}
         </div>

@@ -10,6 +10,10 @@ import {
   updateText,
   makeUndoManager,
   LOCAL_ORIGIN,
+  orderedBlocks,
+  blockMoves,
+  moveBlock,
+  removeBlock,
 } from "../../packages/model/src";
 function clone(doc: Y.Doc) {
   const other = new Y.Doc();
@@ -23,6 +27,77 @@ function reconcile(a: Y.Doc, b: Y.Doc) {
   Y.applyUpdate(b, ua);
 }
 describe("shared office model", () => {
+  test("reordering keeps block/editor identity, supports insertion and removal, and replays after reload", () => {
+    const doc = new Y.Doc();
+    const a = addBlock(doc, "doc", 0, "A"),
+      b = addBlock(doc, "canvas", 1, "B"),
+      c = addBlock(doc, "slides", 2, "C");
+    const content = a.get("content");
+    moveBlock(doc, a.get("id"), null);
+    expect(orderedBlocks(doc)).toEqual([b, c, a]);
+    moveBlock(doc, c.get("id"), b.get("id"));
+    moveBlock(doc, a.get("id"), c.get("id"));
+    expect(orderedBlocks(doc)).toEqual([a, c, b]);
+    expect(orderedBlocks(doc)[0].get("content")).toBe(content);
+    const inserted = addBlock(doc, "doc", 1, "Inserted");
+    expect(orderedBlocks(doc)).toEqual([a, inserted, c, b]);
+    removeBlock(doc, c.get("id"));
+    expect(orderedBlocks(doc)).toEqual([a, inserted, b]);
+    expect(orderedBlocks(clone(doc)).map((block) => block.get("id"))).toEqual(
+      [a, inserted, b].map((block) => block.get("id")),
+    );
+    doc.destroy();
+  });
+  test("concurrent moves, insertions, and text changes converge without cloning or losing blocks", () => {
+    const a = new Y.Doc();
+    const note = addBlock(a, "doc", 0, "Note"),
+      canvas = addBlock(a, "canvas", 1, "Canvas"),
+      deck = addBlock(a, "slides", 2, "Deck");
+    const b = clone(a);
+    moveBlock(a, deck.get("id"), note.get("id"));
+    moveBlock(b, note.get("id"), null);
+    const added = addBlock(a, "doc", 1, "New note");
+    blocks(b).get(0).set("title", "Edited while moving");
+    updateText(
+      blocks(b).get(2).get("slides").get(0).get("title"),
+      "Concurrent slide edit",
+    );
+    reconcile(a, b);
+    expect(orderedBlocks(a).map((block) => block.toJSON())).toEqual(
+      orderedBlocks(b).map((block) => block.toJSON()),
+    );
+    expect(new Set(orderedBlocks(a).map((block) => block.get("id"))).size).toBe(
+      4,
+    );
+    expect(orderedBlocks(a)).toContain(note);
+    expect(orderedBlocks(a)).toContain(canvas);
+    expect(orderedBlocks(a)).toContain(added);
+    expect(note.get("title")).toBe("Edited while moving");
+    expect(deck.get("slides").get(0).get("title").toString()).toBe(
+      "Concurrent slide edit",
+    );
+    a.destroy();
+    b.destroy();
+  });
+  test("undoing a local move preserves remote movement and editor changes", () => {
+    const a = new Y.Doc();
+    const first = addBlock(a, "doc", 0, "A"),
+      second = addBlock(a, "canvas", 1, "B"),
+      third = addBlock(a, "slides", 2, "C");
+    const b = clone(a);
+    const undo = makeUndoManager([blocks(a), blockMoves(a)]);
+    moveBlock(a, third.get("id"), first.get("id"));
+    moveBlock(b, second.get("id"), first.get("id"));
+    blocks(b).get(0).set("title", "Remote edit");
+    Y.applyUpdate(a, Y.encodeStateAsUpdate(b));
+    undo.undo();
+    expect(orderedBlocks(a)).toEqual([second, first, third]);
+    expect(first.get("title")).toBe("Remote edit");
+    expect(blockMoves(a).length).toBe(1);
+    undo.destroy();
+    a.destroy();
+    b.destroy();
+  });
   test("concurrent offline block insertions converge without dropping either", () => {
     const a = new Y.Doc();
     addBlock(a, "doc");
