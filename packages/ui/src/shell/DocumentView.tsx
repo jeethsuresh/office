@@ -34,23 +34,22 @@ import { CopyReference, Backlinks } from "../shared/References";
 import { ReferenceNavigation } from "../shared/ReferenceNavigation";
 import { BlockActionsProvider, BlockActionsSlot } from "../shared/BlockActions";
 import { BlockUpdated } from "./BlockUpdated";
+import { useBlockMotion } from "./useBlockMotion";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
-function Peek({
+function BlockEdgePill({
   block,
   direction,
   onClick,
-  onAdd,
 }: {
   block?: SharedRecord;
   direction: "previous" | "next";
   onClick: () => void;
-  onAdd: () => void;
 }) {
   if (!block)
     return (
       <button
         className={`block-boundary-add block-navigation-pill ${direction}`}
-        onClick={onAdd}
+        onClick={onClick}
         title={
           direction === "previous"
             ? "Add block at beginning"
@@ -97,6 +96,14 @@ export function DocumentView({ session }: { session: DocumentSession }) {
   const blockIDs = list.map((block) => block.get("id")).join(",");
   const state = useSession(session);
   const [active, setActive] = useState("");
+  const motion = useBlockMotion(active, blockIDs, state.hydrated);
+  const activeIndex = Math.max(
+    0,
+    list.findIndex((block) => block.get("id") === active),
+  );
+  const positionIndex = list.findIndex(
+    (block) => block.get("id") === motion.position,
+  );
   const [activeSlides, setActiveSlides] = useState<Record<string, string>>({});
   const [request, setRequest] = useState<{
     block: string;
@@ -127,6 +134,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     return () => undo.current?.destroy();
   }, [shared, moves]);
   function navigate(id: string, slide?: string) {
+    motion.prepare(id);
     setActive(id);
     session.setActiveBlock(id);
     if (slide) {
@@ -172,7 +180,10 @@ export function DocumentView({ session }: { session: DocumentSession }) {
         style={{ position: "fixed", left: 0, top: 0, zIndex: 21000 }}
       />
       <div className="document-view">
-        <div className="block-viewport">
+        <div
+          ref={motion.viewport}
+          className={`block-viewport ${motion.moving ? "is-navigating" : ""}`}
+        >
           {!list.length && (
             <div className="empty-document">
               <div className="empty-art">
@@ -199,16 +210,21 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 <section
                   key={id}
                   data-block-id={id}
-                  hidden={active !== id}
-                  inert={active !== id}
-                  className={`office-block block-${kind} ${active === id ? "is-active" : ""}`}
+                  className={`office-block block-${kind} ${active === id ? "is-active" : ""} ${Math.abs(index - activeIndex) === 1 ? "is-neighbor" : ""}`}
                   style={
                     {
                       "--block-color": BLOCK_META[kind]?.color,
+                      "--block-offset":
+                        index -
+                        (positionIndex < 0 ? activeIndex : positionIndex),
                     } as React.CSSProperties
                   }
                 >
-                  <div className="block-heading">
+                  <div
+                    className="block-heading"
+                    hidden={active !== id}
+                    inert={active !== id}
+                  >
                     <span
                       className="block-type"
                       title={BLOCK_META[kind]?.name}
@@ -237,13 +253,11 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     </div>
                   </div>
                   <div className="block-editor">
-                    <Peek
-                      block={list[index - 1]}
-                      direction="previous"
-                      onClick={() => navigate(list[index - 1].get("id"))}
-                      onAdd={() => openInsert("start")}
-                    />
-                    <div className="block-body">
+                    <div
+                      className="block-body"
+                      inert={active !== id}
+                      aria-hidden={active !== id}
+                    >
                       {kind === "doc" ? (
                         <DocEditor
                           fragment={block.get("content")}
@@ -279,17 +293,34 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                         <p>This block type is not registered.</p>
                       )}
                     </div>
-                    <Peek
-                      block={list[index + 1]}
-                      direction="next"
-                      onClick={() => navigate(list[index + 1].get("id"))}
-                      onAdd={() => openInsert("end")}
-                    />
+                    {Math.abs(index - activeIndex) === 1 && (
+                      <BlockEdgePill
+                        block={block}
+                        direction={index < activeIndex ? "previous" : "next"}
+                        onClick={() => navigate(id)}
+                      />
+                    )}
                   </div>
                 </section>
               </BlockActionsProvider>
             );
           })}
+          {list.length > 0 && activeIndex === 0 && (
+            <div className="block-boundary previous">
+              <BlockEdgePill
+                direction="previous"
+                onClick={() => openInsert("start")}
+              />
+            </div>
+          )}
+          {list.length > 0 && activeIndex === list.length - 1 && (
+            <div className="block-boundary next">
+              <BlockEdgePill
+                direction="next"
+                onClick={() => openInsert("end")}
+              />
+            </div>
+          )}
         </div>
         <Minimap
           blocks={list}

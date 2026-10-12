@@ -1,6 +1,9 @@
 import { test, expect, type Locator, type Page } from "@playwright/test";
 
 async function atCenter(page: Page, locator: Locator) {
+  await expect(page.locator(".block-viewport")).not.toHaveClass(
+    /is-navigating/,
+  );
   const bounds = (await locator.boundingBox())!;
   await page.mouse.move(
     bounds.x + bounds.width / 2,
@@ -11,15 +14,18 @@ async function assertPinned(page: Page, kind: string) {
   await expect(page.locator(".office-block.is-active")).toHaveClass(
     new RegExp(`block-${kind}`),
   );
+  await expect(page.locator(".block-viewport")).not.toHaveClass(
+    /is-navigating/,
+  );
   expect(
     await page.locator(".block-viewport").evaluate((el) => el.scrollTop),
   ).toBe(0);
   expect(await page.evaluate(() => window.scrollY)).toBe(0);
   await expect(
-    page.locator(".office-block.is-active .block-navigation-pill").first(),
+    page.locator(".block-viewport .block-navigation-pill").first(),
   ).toBeInViewport();
   await expect(
-    page.locator(".office-block.is-active .block-navigation-pill").last(),
+    page.locator(".block-viewport .block-navigation-pill").last(),
   ).toBeInViewport();
 }
 async function assertFullscreen(page: Page, selector: string) {
@@ -34,6 +40,11 @@ async function assertFullscreen(page: Page, selector: string) {
   expect(bounds.y).toBeCloseTo(0);
   expect(bounds.width).toBeCloseTo(screen.width);
   expect(bounds.height).toBeCloseTo(screen.height);
+  expect(
+    await root.evaluate((el) =>
+      el.contains(document.elementFromPoint(innerWidth / 2, 20)),
+    ),
+  ).toBe(true);
   const exit = root.getByRole("button", {
     name: "Exit fullscreen",
     exact: true,
@@ -58,7 +69,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
   await page.mouse.wheel(0, 1600);
   await page.keyboard.press("PageDown");
   await assertPinned(page, "doc");
-  await page.locator(".office-block.is-active .block-peek.next").click();
+  await page.locator(".block-peek.next").click();
   await assertPinned(page, "canvas");
   const canvas = page.locator(".block-canvas .drawing-surface");
   const before = await canvas.getAttribute("viewBox");
@@ -95,7 +106,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
   await expect(page.locator(".slide-card.current .title-slide")).toBeVisible();
   await page.getByRole("button", { name: /Go to canvas block/ }).click();
   await expect(canvas).toHaveAttribute("viewBox", panned!);
-  await page.locator(".office-block.is-active .block-peek.previous").click();
+  await page.locator(".block-peek.previous").click();
   await assertPinned(page, "doc");
   // Long notes scroll within the note, without navigating the document.
   await page
@@ -237,6 +248,7 @@ for (const viewport of [
     await page
       .getByRole("button", { name: "Map: slide 2", exact: true })
       .click();
+    await assertPinned(page, "slides");
     const note = page.getByLabel("Slide note", { exact: true });
     await note.fill("sadf");
     const editor = page.locator(".slide-content-body .doc-editor");
@@ -332,6 +344,7 @@ test("mobile vertical swipes stay captured, horizontal swipes snap slides, and t
     await expect(canvas).not.toHaveAttribute("viewBox", before!);
     await assertPinned(page, "canvas");
     await page.getByRole("button", { name: "Map: slide 2", exact: true }).tap();
+    await assertPinned(page, "slides");
     await expect(page.locator(".slide-card").nth(1)).toHaveClass(/current/);
     const id = await page
       .locator(".slide-card.current")

@@ -26,7 +26,8 @@ export function ReferenceNavigation() {
       if (last.current === location.hash) return;
       const target = data.resolve(urn);
       if (!target) return;
-      last.current = location.hash;
+      const destination = location.hash;
+      last.current = destination;
       if (target.block !== "_") {
         const slide =
           target.kind === "slide" ? target.identifier : target.slide;
@@ -34,7 +35,13 @@ export function ReferenceNavigation() {
         else navigation.onNavigate(target.block, slide);
       }
       requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
+        requestAnimationFrame(function focusTarget() {
+          if (last.current !== destination || location.hash !== destination)
+            return;
+          if (document.querySelector(".block-viewport.is-navigating")) {
+            requestAnimationFrame(focusTarget);
+            return;
+          }
           window.dispatchEvent(
             new CustomEvent("office:focus-target", { detail: target }),
           );

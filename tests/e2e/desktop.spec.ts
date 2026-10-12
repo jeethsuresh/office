@@ -311,6 +311,14 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
         ),
       )
       .toBe(true);
+    expect(
+      await page.evaluate(
+        () =>
+          !!document
+            .elementFromPoint(innerWidth / 2, 20)
+            ?.closest(".editor-fullscreen"),
+      ),
+    ).toBe(true);
     await page.screenshot({ path: "test-results/electron-fullscreen.png" });
     await page.keyboard.press("Escape");
     await expect(page.locator(".editor-fullscreen")).toHaveCount(0);

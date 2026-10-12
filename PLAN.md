@@ -193,3 +193,19 @@ Preview checkpoint: the existing processes on 4317/5174 are healthy and the work
 Implementation checkpoint: pills overlay the editor wrapper, with long titles truncated and exposed in full on hover. The bottom pill sits above the editor footer/carousel, and boundary insertion uses the same compact layout. Typecheck and the native package build pass; existing web/mobile/native acceptance checks and screenshot review are running.
 
 Final verification: typecheck, formatting, the production/native package, and all 38 acceptance workflows pass against the final bundle. Desktop/mobile/short-landscape screenshots confirm compact title/icon/color pills and clear carousel, formula bar, and footer controls. Notes, canvases, decks, and sheets retain explicit navigation and captured editor scrolling; fullscreen retains its existing navigator. README, architecture, and verification notes are updated. Recheck the preview processes and publish to the authorized GitHub `origin/main`.
+
+## Neighbor block edges and smooth navigation — 2026-10-12
+
+Correction: the pills belong over the previous block's ending and the next block's beginning, rather than the active editor. Show actual neighboring editor surfaces around the active block.
+
+- [x] Lay out mounted block editors with clipped neighboring edges and compact pills over those neighbors. Keep boundary insertion and active header actions available.
+- [x] Animate explicit block navigation, including minimap selections and rapid changes, while preserving editor identity, captured wheel/touch input, reduced motion, and fullscreen.
+- [x] Verify content/placement and intermediate animation positions on desktop/mobile; rebuild Electron, update documentation, and push.
+
+Preview checkpoint: reuse the healthy existing preview on 4317/5174; no test server remains on 4318. The working tree started clean.
+
+Implementation checkpoint: the grid shows real mounted neighboring editors around the active surface, with each pill in its own block. Relative-position transitions preserve fixed fullscreen geometry and leave ancestor scroll positions unchanged. Five existing navigation/fullscreen/mobile checks pass, along with two new desktop/mobile checks that measure intermediate movement, neighbor geometry, rapid retargeting, reduced motion, and editor identity. Screenshots were reviewed; rebuild the final native bundle and run all 40 acceptance checks.
+
+Refinement checkpoint: the first full run passed 38 checks and exposed gesture/geometry checks running before block motion settled. Reference target focus and browser gesture measurements now wait for the transition. The short landscape profile uses smaller edge strips/pills to keep the embedded editor usable. Screenshot review also caught a parent stacking context drawing the header over fullscreen; removing that context restores the distraction-free view, with a hit-test added to web/native fullscreen checks. All 11 navigation checks pass. A later run caught keyboard commits being dropped by temporarily making the moving active editor inert; keep the active editor interactive throughout motion. Rebuild and run the complete final suite.
+
+Final verification: typecheck, formatting, the production/native package, and all 40 acceptance checks pass against the final bundle. Screenshots confirm each pill belongs to the actual previous/next surface, including mobile and short landscape, and fullscreen paints above the header. Smooth motion, rapid retargeting, reduced motion, original editor identity, keyboard commits, canvas gestures, references, collaboration, and persistence are verified. The interrupted run's exact temporary document was removed from the isolated test server. Update the preview checkpoint and publish to the authorized GitHub `origin/main`.
