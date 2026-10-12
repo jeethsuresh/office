@@ -1,4 +1,4 @@
-# Verification — 2026-10-11
+# Verification — 2026-10-12
 
 Verified on macOS arm64 with Bun 1.4.0 and Go 1.25.2.
 
@@ -8,11 +8,11 @@ Verified on macOS arm64 with Bun 1.4.0 and Go 1.25.2.
 - `bun run test:race`: seven Go store/server tests passed under the race detector.
 - `bun run build`: production UI, Go executable, Electron main, and sandboxed preload built successfully.
 - `bun run package:dir`: native macOS arm64 `apps/desktop/release/mac-arm64/office.app` built with bundled Go/UI and the Office icon. The local development signing identity was discovered by electron-builder; the app was not notarized.
-- Twenty-eight Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
+- Thirty Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
 
 The acceptance suite verifies:
 
-1. Native Electron startup, sandbox/context isolation, preload, rendered document, drag reordering/undo, slide addition/carousel navigation, Office-logo workspace browsing and icon view, return to the document, and owned Go process shutdown.
+1. Native Electron startup, sandbox/context isolation, preload, rendered document, context-menu keyboard focus/cancellation and delete confirmation, drag reordering/undo, slide addition/carousel navigation, Office-logo workspace browsing and icon view, return to the document, and owned Go process shutdown. Deleting the focused deck keeps the identical native fullscreen host with zero exit/re-entry events; structural undo restores the deck.
 2. Persisted rich text, canvas state, and slide titles after restarting Go.
 3. An unsent offline edit surviving a full Electron quit and relaunch, with the same origin. The server journal size is asserted unchanged while the offline edit is made.
 4. Folder creation, document creation/rename, Markdown, rich text, drawing, slide layouts/content switches, presentation, insertion, and the minimap.
@@ -32,6 +32,7 @@ The acceptance suite verifies:
 17. Wider minimaps show distinct rich-text structures and live canvas geometry. Inline insertion/deletion buttons are absent; minimap insertion resolves the selected position, deletion removes that block, and undo restores it. Narrow layouts retain the compact map. Expanded fullscreen previews are visually inspected and hit-tested beyond the original controls rail to prevent clipping.
 18. Mouse and real Chromium touch drags reorder blocks while preserving the original editor DOM. Another browser edits during the drag; content and order converge, and order survives reload. Gap insertion uses its clicked neighbor, structural undo restores both insertion and movement, and Alt+Up/Down reorders by keyboard. Fullscreen drag cancellation, reordering, and insertion preserve the native host and focus the new editor; Escape gives the insertion dialog priority. Tooltip geometry is asserted entirely beside normal and expanded fullscreen maps.
 19. Newly added slides animate through multiple intermediate scroll positions on desktop/mobile, with reduced-motion behavior also checked. Clickable carousel dots and previous/next arrows navigate to the expected snapped slide and disable at the ends. Twelve-slide rapid-addition checks verify delayed scroll-end events cannot replace the new slide selection with the previous one.
+20. Right-click and Shift+F10 open a named block menu without selecting that block; Escape restores focus and outside interaction dismisses it. Deletion confirms the targeted title, syncs to a second client, and undo restores the content. Context clicking a browsed row in a deck longer than five slides deletes its entire deck. Real mobile touch holds open the same menu while short taps, drags, and later keyboard navigation stay distinct. Normal and expanded fullscreen maps support deletion; deleting the focused block follows a surviving editor. The old previous/next slide buttons are absent from the left rail, with carousel/minimap navigation preserved.
 
 Native fullscreen verification covers early Escape during the macOS transition, the bottom X, and entry from an already-fullscreen window. A dedicated preload operation waits for the native fullscreen animation, preventing a window-size change from leaving the renderer stuck in fullscreen. Existing collaboration and persistence checks passed after these UI changes.
 

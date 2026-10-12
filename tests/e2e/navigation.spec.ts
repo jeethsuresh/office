@@ -98,7 +98,7 @@ test("wheel, keyboard and touch stay inside editors; explicit navigation selects
   await expect(current).toHaveAttribute("data-slide-id", slideID!);
   await assertPinned(page, "slides");
   await page
-    .getByRole("button", { name: "Previous slide", exact: true })
+    .getByRole("button", { name: "Previous carousel slide", exact: true })
     .click();
   await expect(page.locator(".slide-card.current .title-slide")).toBeVisible();
   await page.getByRole("button", { name: /Go to canvas block/ }).click();
@@ -202,8 +202,16 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
     .click();
   await assertFullscreen(page, ".slides-editor");
   await page
-    .getByRole("button", { name: "Previous slide", exact: true })
+    .getByRole("button", { name: "Expand fullscreen map", exact: true })
+    .hover();
+  await page
+    .getByRole("complementary", {
+      name: "Fullscreen document minimap",
+      exact: true,
+    })
+    .getByRole("button", { name: "Map: slide 1", exact: true })
     .click();
+  await page.mouse.move(400, 100);
   await expect(page.locator(".slide-card.current .title-slide")).toBeVisible();
   await page
     .getByLabel("Slide title", { exact: true })

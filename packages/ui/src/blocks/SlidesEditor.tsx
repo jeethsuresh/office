@@ -228,20 +228,6 @@ export function SlidesEditor({
         ))}
         <span className="tool-divider" />
         <ToolButton
-          label="Previous slide"
-          disabled={active === 0}
-          onClick={() => go(active - 1)}
-        >
-          <ArrowLeft size={17} />
-        </ToolButton>
-        <ToolButton
-          label="Next slide"
-          disabled={active >= list.length - 1}
-          onClick={() => go(active + 1)}
-        >
-          <ArrowRight size={17} />
-        </ToolButton>
-        <ToolButton
           label="Present slides"
           disabled={!list.length}
           onClick={() => setPresent(true)}

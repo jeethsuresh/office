@@ -3163,3 +3163,53 @@ p {
     right: -30px;
   }
 }
+
+.minimap-segment {
+  -webkit-touch-callout: none;
+}
+.minimap-context-menu {
+  position: fixed;
+  z-index: 20002;
+  width: 220px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  background: #fffdf7;
+  border: 1px solid #dedccd;
+  border-radius: 8px;
+  box-shadow: 0 7px 24px #484d4230;
+  color: #626553;
+}
+.minimap-context-heading {
+  padding: 5px 8px 12px;
+  border-bottom: 1px solid #e9e6dd;
+  margin-bottom: 5px;
+}
+.minimap-context-heading span {
+  display: block;
+  font-size: 9px;
+  color: #a4a38e;
+  margin-bottom: 5px;
+}
+.minimap-context-heading strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.minimap-context-menu button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 8px;
+  color: #b85c50;
+  font-size: 12px;
+  border-radius: 5px;
+}
+.minimap-context-menu button:hover,
+.minimap-context-menu button:focus-visible {
+  background: #f8eae3;
+}

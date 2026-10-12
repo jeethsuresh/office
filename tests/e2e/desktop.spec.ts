@@ -41,6 +41,28 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
       name: "Document minimap",
       exact: true,
     });
+    const drawing = documentMap.getByRole("button", {
+      name: /Go to canvas block/,
+    });
+    await drawing.click({ button: "right" });
+    const blockMenu = page.getByRole("menu");
+    await expect(
+      blockMenu.getByRole("menuitem", { name: "Delete block", exact: true }),
+    ).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(blockMenu).toHaveCount(0);
+    await expect(drawing).toBeFocused();
+    await drawing.press("Shift+F10");
+    await blockMenu
+      .getByRole("menuitem", { name: "Delete block", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Delete this block?", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Keep it", exact: true }).click();
+    await expect(
+      page.getByLabel("Document text", { exact: true }),
+    ).toContainText("Good things happen");
     const originalOrder = await documentMap
       .locator(".minimap-segment")
       .evaluateAll((elements) =>
@@ -117,6 +139,12 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await page
       .getByRole("button", { name: "Add title slide", exact: true })
       .click();
+    await expect(
+      page.getByRole("button", { name: "Previous slide", exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Next slide", exact: true }),
+    ).toHaveCount(0);
     await expect(page.locator(".slide-card").last()).toHaveClass(/current/);
     const carousel = page.getByRole("navigation", {
       name: "Slide carousel",
@@ -265,6 +293,23 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     ).toBe(true);
     expect(await page.evaluate(() => (window as any).nativeChanges)).toBe(0);
     await page.screenshot({ path: "test-results/electron-fullscreen-map.png" });
+    await map
+      .getByRole("button", { name: /Go to slides block/ })
+      .click({ button: "right" });
+    await blockMenu
+      .getByRole("menuitem", { name: "Delete block", exact: true })
+      .click();
+    await page
+      .getByRole("dialog", { name: "Delete this block?", exact: true })
+      .getByRole("button", { name: "Delete block", exact: true })
+      .click();
+    await expect(page.locator(".doc-editor.editor-fullscreen")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.fullscreenElement === (window as any).nativeHost,
+      ),
+    ).toBe(true);
+    expect(await page.evaluate(() => (window as any).nativeChanges)).toBe(0);
     await page
       .getByRole("button", { name: "Exit fullscreen", exact: true })
       .click();
@@ -272,6 +317,10 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     await expect
       .poll(() => page.evaluate(() => document.fullscreenElement === null))
       .toBe(true);
+    await documentMap
+      .getByRole("button", { name: "Undo block change", exact: true })
+      .click();
+    await expect(page.locator(".slide-card")).toHaveCount(3);
     await page.screenshot({ path: "test-results/electron.png" });
   } finally {
     await app.close();

@@ -16,6 +16,7 @@ export type DocumentNavigation = {
   onNavigate: (block: string, slide?: string) => void;
   onMove?: (block: string, before: string | null) => void;
   onAddAt?: (before: string | null) => void;
+  onDeleteBlock?: (block: string) => void;
 };
 export const DocumentNavigationContext =
   createContext<DocumentNavigation | null>(null);

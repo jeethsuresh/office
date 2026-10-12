@@ -203,6 +203,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
         onNavigate: navigate,
         onMove: reorder,
         onAddAt: insertAtGap,
+        onDeleteBlock: setDeleteID,
       }}
     >
       <div className="document-view">
@@ -328,6 +329,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           onNavigate={navigate}
           onMove={reorder}
           onAddAt={insertAtGap}
+          onDeleteBlock={setDeleteID}
           onAdd={() => openInsert("after")}
           onDelete={() => setDeleteID(active)}
           onUndo={() => undo.current?.undo()}
@@ -419,8 +421,14 @@ export function DocumentView({ session }: { session: DocumentSession }) {
         {deleteID && (
           <Modal title="Delete this block?" onClose={() => setDeleteID(null)}>
             <p className="muted">
-              This removes the block and its content from the document. You can
-              undo the change from the minimap.
+              This removes{" "}
+              <strong>
+                {list
+                  .find((block) => block.get("id") === deleteID)
+                  ?.get("title") || "this block"}
+              </strong>{" "}
+              and its content from the document. You can undo the change from
+              the minimap.
             </p>
             <div className="modal-actions">
               <button

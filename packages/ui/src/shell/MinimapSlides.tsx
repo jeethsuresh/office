@@ -18,6 +18,7 @@ export function MinimapSlides({
   onNavigate,
   hint,
   onScroll,
+  contextMenuOpen = false,
 }: {
   slides: SharedRecord[];
   title: string;
@@ -26,6 +27,7 @@ export function MinimapSlides({
   onNavigate: (slide: string) => void;
   hint: (key: string, text: string) => ButtonHTMLAttributes<HTMLButtonElement>;
   onScroll: () => void;
+  contextMenuOpen?: boolean;
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const rowHeight = useRef(20);
@@ -122,7 +124,7 @@ export function MinimapSlides({
         if (event.pointerType === "mouse") {
           stop();
           setBrowsing(false);
-          center();
+          if (!contextMenuOpen) center();
         }
       }}
       onPointerDown={(event) => {
@@ -133,7 +135,7 @@ export function MinimapSlides({
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
           stop();
           setBrowsing(false);
-          center();
+          if (!contextMenuOpen) center();
         }
       }}
     >

@@ -46,7 +46,11 @@ export function FullscreenNavigator() {
         if (event.pointerType === "mouse") scope.setExpanded(true);
       }}
       onPointerLeave={(event) => {
-        if (event.pointerType === "mouse") collapse();
+        if (
+          event.pointerType === "mouse" &&
+          !event.currentTarget.querySelector(".minimap-context-menu")
+        )
+          collapse();
       }}
       onBlur={(event) => {
         if (

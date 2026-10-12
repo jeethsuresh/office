@@ -2,6 +2,7 @@ import {
   useId,
   useState,
   useRef,
+  useEffect,
   type CSSProperties,
   type FocusEvent,
   type PointerEvent,
@@ -12,6 +13,7 @@ import { Plus, Trash2, Undo2 } from "lucide-react";
 import { MinimapSlides } from "./MinimapSlides";
 import { BlockPreview } from "./BlockPreview";
 import { useMinimapDrag } from "./useMinimapDrag";
+import { useMinimapMenu } from "./useMinimapMenu";
 
 export function Minimap({
   blocks,
@@ -23,6 +25,7 @@ export function Minimap({
   onUndo,
   onMove,
   onAddAt,
+  onDeleteBlock,
   className = "",
   label = "Document minimap",
 }: {
@@ -35,6 +38,7 @@ export function Minimap({
   onUndo?: () => void;
   onMove?: (block: string, before: string | null) => void;
   onAddAt?: (before: string | null) => void;
+  onDeleteBlock?: (block: string) => void;
   className?: string;
   label?: string;
 }) {
@@ -49,12 +53,23 @@ export function Minimap({
     right?: number;
     maxWidth: number;
   } | null>(null);
+  const context = useMinimapMenu(!!onDeleteBlock, () => {
+    drag.cancel();
+    setTooltip(null);
+  });
+  const menuBlock = blocks.find(
+    (block) => block.get("id") === context.menu?.block,
+  );
+  useEffect(() => {
+    if (context.menu && !menuBlock) context.close(false);
+  }, [blocks.map((block) => block.get("id")).join(",")]);
   function show(
     event: PointerEvent<HTMLButtonElement> | FocusEvent<HTMLButtonElement>,
     key: string,
     text: string,
   ) {
     if ("pointerType" in event && event.pointerType !== "mouse") return;
+    if (context.menu) return;
     const bounds = event.currentTarget.getBoundingClientRect();
     const map = event.currentTarget
       .closest(".minimap")!
@@ -107,6 +122,13 @@ export function Minimap({
               key={id}
               className={`minimap-segment ${slides.length ? "minimap-deck" : ""} ${active === id ? "active" : ""} ${drag.dragging === id ? "dragged" : ""}`}
               data-map-block={id}
+              onContextMenu={(event) => context.context(event, id)}
+              onKeyDownCapture={(event) => context.key(event, id)}
+              onPointerDownCapture={(event) => context.start(event, id)}
+              onPointerMoveCapture={context.move}
+              onPointerUpCapture={context.release}
+              onPointerCancelCapture={context.release}
+              onClickCapture={(event) => context.click(event, id)}
               data-drop={
                 drag.dragging
                   ? drag.before === id
@@ -153,6 +175,10 @@ export function Minimap({
                 aria-keyshortcuts={
                   onMove ? "Alt+ArrowUp Alt+ArrowDown" : undefined
                 }
+                aria-haspopup={onDeleteBlock ? "menu" : undefined}
+                aria-expanded={
+                  onDeleteBlock ? context.menu?.block === id : undefined
+                }
                 aria-label={`Go to ${kind} block: ${title}`}
                 aria-current={active === id && kind !== "slides"}
                 {...hint(id, `${index + 1}. ${title}`)}
@@ -172,6 +198,7 @@ export function Minimap({
                   onNavigate={(slide) => onNavigate(id, slide)}
                   hint={hint}
                   onScroll={() => setTooltip(null)}
+                  contextMenuOpen={context.menu?.block === id}
                 />
               )}
               {onAddAt && index < blocks.length - 1 && (
@@ -244,6 +271,47 @@ export function Minimap({
           }}
         >
           {tooltip.text}
+        </div>
+      )}
+      {context.menu && menuBlock && (
+        <div
+          ref={context.element}
+          className="minimap-context-menu"
+          role="menu"
+          aria-label={`Block actions: ${menuBlock.get("title") || "Untitled block"}`}
+          style={{ left: context.menu.left, top: context.menu.top }}
+          onContextMenu={(event) => event.preventDefault()}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" || event.key === "Tab") {
+              event.preventDefault();
+              event.stopPropagation();
+              context.close();
+            }
+            if (["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+              event.preventDefault();
+              context.element.current
+                ?.querySelector<HTMLButtonElement>("button")
+                ?.focus();
+            }
+          }}
+        >
+          <div className="minimap-context-heading">
+            <span>
+              {BLOCK_META[menuBlock.get("kind") as BlockKind]?.name} block
+            </span>
+            <strong>{menuBlock.get("title") || "Untitled block"}</strong>
+          </div>
+          <button
+            role="menuitem"
+            onClick={() => {
+              const id = context.menu!.block;
+              context.close(false);
+              onDeleteBlock?.(id);
+            }}
+          >
+            <Trash2 size={15} />
+            Delete block
+          </button>
         </div>
       )}
     </aside>

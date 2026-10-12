@@ -270,11 +270,26 @@ export function EditorFullscreenProvider({
   }
   useLayoutEffect(() => {
     const focused = current.current;
-    if (!focused || !navigation.active) return;
+    if (!focused) return;
+    const selected =
+      navigation.blocks.find((b) => b.get("id") === navigation.active) ??
+      navigation.blocks[0];
+    if (!selected) return;
     const block =
       focused.element.closest<HTMLElement>("[data-block-id]")?.dataset.blockId;
-    if (block && block !== navigation.active) navigate(navigation.active);
-  }, [navigation.active]);
+    const blockID = selected.get("id") as string;
+    if (!focused.element.isConnected || (block && block !== blockID)) {
+      const id = `block:${blockID}`;
+      const element = registry.current.get(id);
+      if (!element) return;
+      remember(element);
+      // Deletion detaches the old editor before selection catches up. Follow a
+      // surviving block before the passive cleanup can exit native fullscreen.
+      current.current = { id, element };
+      navigation.onNavigate(blockID);
+      setTarget(current.current);
+    }
+  });
   useLayoutEffect(() => {
     if (!target) return;
     const root = target.element;
@@ -321,6 +336,7 @@ export function EditorFullscreenProvider({
         return;
       if (event.key === "Escape") {
         if (container.querySelector(".minimap.is-dragging")) return;
+        if (container.querySelector(".minimap-context-menu")) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         void exit();

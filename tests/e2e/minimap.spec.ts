@@ -159,7 +159,7 @@ test("long decks center five rows, browse on wheel/hover, and remain grouped in 
     // Explicit navigation must center the selected slide, including endpoints.
     for (let index = 0; index < 6; index++)
       await page
-        .getByRole("button", { name: "Previous slide", exact: true })
+        .getByRole("button", { name: "Previous carousel slide", exact: true })
         .click();
     await centered(map, 6);
     expect(await visibleSlides(map)).toEqual([4, 5, 6, 7, 8]);
@@ -184,11 +184,11 @@ test("long decks center five rows, browse on wheel/hover, and remain grouped in 
     await page.mouse.move(600, 100);
     await centered(map, 6);
     await page
-      .getByRole("button", { name: "Previous slide", exact: true })
+      .getByRole("button", { name: "Previous carousel slide", exact: true })
       .click();
     for (let index = 0; index < 4; index++)
       await page
-        .getByRole("button", { name: "Previous slide", exact: true })
+        .getByRole("button", { name: "Previous carousel slide", exact: true })
         .click();
     await centered(map, 1);
     expect(await visibleSlides(map)).toEqual([1, 2, 3]);
