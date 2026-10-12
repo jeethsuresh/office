@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -17,6 +17,7 @@ import {
   Code2,
   Download,
   Type,
+  Link2,
 } from "lucide-react";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
@@ -26,6 +27,14 @@ import type { DocumentSession } from "@office/collaboration";
 import { ToolButton } from "../shared/Toolbar";
 import { Modal } from "../shared/Modal";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
+import { OfficeReference, HeadingIdentity } from "./docReferences";
+import {
+  SlashPopover,
+  CopyReference,
+  type SlashState,
+} from "../shared/References";
+import { useOfficeData } from "../shared/OfficeData";
+import { referenceURN } from "@office/model";
 export function DocEditor({
   fragment,
   session,
@@ -37,6 +46,10 @@ export function DocEditor({
   compact?: boolean;
   readOnly?: boolean;
 }) {
+  const data = useOfficeData();
+  const [slash, setSlash] = useState<SlashState | null>(null);
+  const slashRef = useRef(slash);
+  slashRef.current = slash;
   const ownerID = (fragment.parent as Y.Map<unknown> | null)?.get("id") as
     string | undefined;
   const fullscreen = useEditorFullscreen(
@@ -50,6 +63,8 @@ export function DocEditor({
   const editor = useEditor(
     {
       extensions: [
+        HeadingIdentity,
+        OfficeReference,
         StarterKit.configure({
           undoRedo: false,
           heading: { levels: [1, 2, 3] },
@@ -64,7 +79,29 @@ export function DocEditor({
       ],
       editable: !readOnly,
       shouldRerenderOnTransaction: true,
+      onUpdate: ({ editor }) => updateSlash(editor),
+      onSelectionUpdate: ({ editor }) => updateSlash(editor),
       editorProps: {
+        handleKeyDown: (_view, event) => {
+          if (!slashRef.current) return false;
+          if (event.key === "Escape") {
+            setSlash(null);
+            return true;
+          }
+          const button =
+            fullscreen.ref.current?.querySelector<HTMLButtonElement>(
+              ".slash-command-list button",
+            );
+          if (event.key === "Enter" && button) {
+            button.click();
+            return true;
+          }
+          if (event.key === "ArrowDown" && button) {
+            button.focus();
+            return true;
+          }
+          return false;
+        },
         attributes: {
           class: "prose",
           spellcheck: "true",
@@ -88,6 +125,32 @@ export function DocEditor({
     },
     [fragment, session, readOnly],
   );
+  function updateSlash(current: NonNullable<typeof editor>) {
+    if (readOnly || !current.state.selection.empty) {
+      setSlash(null);
+      return;
+    }
+    const selection = current.state.selection,
+      before = selection.$from.parent.textBetween(
+        0,
+        selection.$from.parentOffset,
+        "",
+        "\ufffc",
+      );
+    const match = /(?:^|\s)(\/\w*)$/.exec(before);
+    if (!match) {
+      setSlash(null);
+      return;
+    }
+    const position = current.view.coordsAtPos(selection.from);
+    setSlash({
+      query: match[1],
+      from: selection.from - match[1].length,
+      to: selection.from,
+      x: position.left,
+      y: position.bottom,
+    });
+  }
   if (!editor) return null;
   function download() {
     const text = new Turndown({
@@ -208,6 +271,35 @@ export function DocEditor({
           <ToolButton label="Download Markdown" onClick={download}>
             <Download size={17} />
           </ToolButton>
+          <ToolButton
+            label="Insert reference"
+            onClick={() => {
+              const position = editor.view.coordsAtPos(
+                editor.state.selection.from,
+              );
+              setSlash({
+                query: "/link",
+                from: editor.state.selection.from,
+                to: editor.state.selection.from,
+                x: position.left,
+                y: position.bottom,
+              });
+            }}
+          >
+            <Link2 size={17} />
+          </ToolButton>
+          <CopyReference
+            urn={referenceURN({
+              document: session.id,
+              block: (() => {
+                let owner: any = fragment.parent;
+                while (owner && !owner.get?.("kind")) owner = owner.parent;
+                return owner?.get("id") ?? "_";
+              })(),
+              identifier: editor.getAttributes("heading").officeID ?? "_",
+            })}
+            label="Copy heading or note reference"
+          />
         </EditorTools>
       )}
       <div className="doc-paper">
@@ -217,6 +309,26 @@ export function DocEditor({
           <span>·</span> Markdown feels at home here
         </div>
       </div>
+      {slash && (
+        <SlashPopover
+          state={slash}
+          onClose={() => setSlash(null)}
+          onLink={(urn) => {
+            const target = data.resolve(urn);
+            editor
+              .chain()
+              .focus()
+              .deleteRange({ from: slash.from, to: slash.to })
+              .insertContent({
+                type: "officeReference",
+                attrs: { urn, label: target?.label ?? "Reference" },
+              })
+              .insertContent(" ")
+              .run();
+            setSlash(null);
+          }}
+        />
+      )}
       {markdown !== null && (
         <Modal title="A little Markdown" onClose={() => setMarkdown(null)}>
           <p className="muted">

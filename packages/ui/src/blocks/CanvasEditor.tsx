@@ -15,6 +15,9 @@ import {
   ZoomOut,
   Scan,
   Download,
+  MapPin,
+  Link2,
+  ExternalLink,
 } from "lucide-react";
 import {
   LOCAL_ORIGIN,
@@ -31,6 +34,15 @@ import { useShared, useSession } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
 import { Modal } from "../shared/Modal";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
+import {
+  CopyReference,
+  ReferencePicker,
+  ReferenceChip,
+  SlashPopover,
+  type SlashState,
+} from "../shared/References";
+import { useOfficeData, useOfficeRevision } from "../shared/OfficeData";
+import type { Target } from "@office/model";
 type Tool = "select" | "hand" | ShapeKind;
 const palette = [
   "#3e4147",
@@ -40,11 +52,19 @@ const palette = [
   "#6d947d",
   "#9a78b1",
 ];
-function ShapeView({ shape, selected }: { shape: Shape; selected: boolean }) {
+function ShapeView({
+  shape,
+  selected,
+  linkedLabel,
+}: {
+  shape: Shape;
+  selected: boolean;
+  linkedLabel?: string;
+}) {
   const { x, y, width: w, height: h, color, fill } = shape;
   const stroke = { stroke: color, strokeWidth: 2.5, fill };
   const label =
-    shape.text && shape.kind !== "text" ? (
+    shape.text && shape.kind !== "text" && shape.kind !== "pin" ? (
       <text
         x={x + w / 2}
         y={y + h / 2}
@@ -57,7 +77,26 @@ function ShapeView({ shape, selected }: { shape: Shape; selected: boolean }) {
       </text>
     ) : null;
   return (
-    <g data-shape-id={shape.id} className="canvas-shape">
+    <g
+      data-shape-id={shape.id}
+      data-office-anchor={shape.id}
+      className={`canvas-shape ${shape.kind === "pin" ? "canvas-pin" : ""}`}
+    >
+      {shape.kind === "pin" && (
+        <g>
+          <path
+            d={`M${x} ${y} C${x - 8} ${y - 12},${x - 20} ${y - 24},${x - 20} ${y - 36} A20 20 0 1 1 ${x + 20} ${y - 36} C${x + 20} ${y - 24},${x + 8} ${y - 12},${x} ${y}`}
+            fill={color}
+            stroke="#fffdf8"
+            strokeWidth={2}
+          />
+          <circle cx={x} cy={y - 36} r={6} fill="#fffdf8" />
+          <text x={x + 30} y={y - 31} fill={color} fontSize={18}>
+            {shape.text || "Pin"}
+            {linkedLabel ? ` · ${linkedLabel}` : ""}
+          </text>
+        </g>
+      )}
       {shape.kind === "rect" && (
         <rect
           x={Math.min(x, x + w)}
@@ -142,6 +181,8 @@ export function CanvasEditor({
   compact?: boolean;
   readOnly?: boolean;
 }) {
+  const data = useOfficeData();
+  useOfficeRevision();
   const fullscreen = useEditorFullscreen(
     `${compact ? "slide" : "block"}:${scope}${compact ? ":canvas" : ""}`,
   );
@@ -160,6 +201,19 @@ export function CanvasEditor({
     value: string;
     id?: string;
   } | null>(null);
+  const [pin, setPin] = useState<{
+    x: number;
+    y: number;
+    id?: string;
+    label: string;
+    link: string;
+  } | null>(null);
+  const [pinPicker, setPinPicker] = useState(false);
+  const [slash, setSlash] = useState<SlashState | null>(null);
+  let blockOwner: any = shapes.parent;
+  while (blockOwner && !blockOwner.get?.("kind"))
+    blockOwner = blockOwner.parent;
+  const blockID = blockOwner?.get("id") ?? scope;
   const gesture = useRef<{
     x: number;
     y: number;
@@ -175,6 +229,32 @@ export function CanvasEditor({
       undo.current?.destroy();
     };
   }, [shapes]);
+  useEffect(() => {
+    const focus = (event: Event) => {
+      const target = (event as CustomEvent<Target>).detail;
+      if (
+        target.document !== session.id ||
+        target.block !== blockID ||
+        target.kind !== "pin" ||
+        (target.slide && target.slide !== scope)
+      )
+        return;
+      const shape = shapes.get(target.identifier)?.toJSON() as
+        Shape | undefined;
+      if (shape) {
+        setSelected(shape.id);
+        setView({
+          x: shape.x - 400,
+          y: shape.y - 220,
+          w: 800,
+          h: (800 * 650) / 1200,
+        });
+        svg.current?.focus({ preventScroll: true });
+      }
+    };
+    window.addEventListener("office:focus-target", focus);
+    return () => window.removeEventListener("office:focus-target", focus);
+  }, [shapes, blockID, scope, session.id]);
   useEffect(() => {
     const element = svg.current;
     if (!element) return;
@@ -235,6 +315,10 @@ export function CanvasEditor({
     }
     if (tool === "text") {
       setText({ ...p, value: "" });
+      return;
+    }
+    if (tool === "pin") {
+      setPin({ ...p, label: "A little anchor", link: "" });
       return;
     }
     const shape: Shape = {
@@ -354,6 +438,7 @@ export function CanvasEditor({
               { id: "arrow", label: "Arrow (A)", icon: MoveUpRight },
               { id: "pen", label: "Draw (P)", icon: Pencil },
               { id: "text", label: "Text (T)", icon: Type },
+              { id: "pin", label: "Pin (I)", icon: MapPin },
             ] as const
           ).map((item) => (
             <ToolButton
@@ -365,6 +450,39 @@ export function CanvasEditor({
               <item.icon size={18} />
             </ToolButton>
           ))}
+          {selected && shapes.get(selected)?.get("kind") === "pin" && (
+            <>
+              <ToolButton
+                label="Edit selected pin"
+                onClick={() => {
+                  const shape = shapes.get(selected)!.toJSON() as Shape;
+                  setPin({
+                    x: shape.x,
+                    y: shape.y,
+                    id: shape.id,
+                    label: shape.text ?? "Pin",
+                    link: shape.link ?? "",
+                  });
+                }}
+              >
+                <Link2 size={17} />
+              </ToolButton>
+              <CopyReference
+                urn={`${session.id}:${blockID}:${selected}`}
+                label="Copy pin reference"
+              />
+              {shapes.get(selected)?.get("link") && (
+                <ToolButton
+                  label="Open pin target"
+                  onClick={() =>
+                    void data.open(shapes.get(selected!)!.get("link"))
+                  }
+                >
+                  <ExternalLink size={17} />
+                </ToolButton>
+              )}
+            </>
+          )}
           <span className="tool-divider" />
           <div className="color-palette">
             {palette.map((c) => (
@@ -441,11 +559,23 @@ export function CanvasEditor({
             session.awareness.setLocalStateField("canvas", null)
           }
           onDoubleClick={(e) => {
-            if (readOnly) return;
             const id = (e.target as Element)
               .closest("[data-shape-id]")
               ?.getAttribute("data-shape-id");
             const shape = id ? (shapes.get(id)?.toJSON() as Shape) : null;
+            if (shape?.kind === "pin") {
+              if (shape.link) void data.open(shape.link);
+              else if (!readOnly)
+                setPin({
+                  x: shape.x,
+                  y: shape.y,
+                  id: shape.id,
+                  label: shape.text ?? "Pin",
+                  link: "",
+                });
+              return;
+            }
+            if (readOnly) return;
             if (shape)
               setText({
                 x: shape.x,
@@ -464,6 +594,7 @@ export function CanvasEditor({
               a: "arrow",
               p: "pen",
               t: "text",
+              i: "pin",
             };
             if ((e.metaKey || e.ctrlKey) && e.key === "z") {
               e.preventDefault();
@@ -498,6 +629,16 @@ export function CanvasEditor({
               key={shape.id}
               shape={shape}
               selected={shape.id === selected && !readOnly}
+              linkedLabel={
+                shape.link
+                  ? (() => {
+                      const target = data.resolve(shape.link!);
+                      return target
+                        ? `${target.label}${target.kind === "cell" && target.value ? ` = ${target.value}` : ""}`
+                        : "Missing reference";
+                    })()
+                  : undefined
+              }
             />
           ))}
           {draft && <ShapeView shape={draft} selected={false} />}{" "}
@@ -546,10 +687,50 @@ export function CanvasEditor({
             autoFocus
             aria-label="Canvas text"
             value={text.value}
-            onChange={(e) => setText({ ...text, value: e.target.value })}
+            onChange={(event) => {
+              setText({ ...text, value: event.target.value });
+              const match = /(?:^|\s)(\/\w*)$/.exec(event.target.value);
+              const bounds = event.currentTarget.getBoundingClientRect();
+              setSlash(
+                match
+                  ? {
+                      query: match[1],
+                      from: event.target.value.length - match[1].length,
+                      to: event.target.value.length,
+                      x: bounds.left,
+                      y: bounds.bottom,
+                    }
+                  : null,
+              );
+            }}
             className="field"
             rows={4}
           />
+          {slash && (
+            <SlashPopover
+              state={slash}
+              onClose={() => setSlash(null)}
+              onLink={(urn) => {
+                putShape(shapes, {
+                  id: crypto.randomUUID(),
+                  kind: "pin",
+                  x: text.x,
+                  y: text.y,
+                  width: 40,
+                  height: 56,
+                  color,
+                  fill: "none",
+                  text:
+                    text.value.slice(0, slash.from).trim() ||
+                    "Connected thought",
+                  link: urn,
+                });
+                setText(null);
+                setSlash(null);
+                setTool("select");
+              }}
+            />
+          )}
           <div className="modal-actions">
             <button
               className="primary-button"
@@ -573,6 +754,88 @@ export function CanvasEditor({
               }}
             >
               Save text
+            </button>
+          </div>
+        </Modal>
+      )}
+      {pin && (
+        <Modal
+          title={pin.id ? "Edit canvas pin" : "Add canvas pin"}
+          onClose={() => {
+            setPin(null);
+            setPinPicker(false);
+          }}
+        >
+          <label className="field-label">
+            Pin name
+            <input
+              autoFocus
+              className="field"
+              aria-label="Pin name"
+              value={pin.label}
+              onChange={(event) => {
+                setPin({ ...pin, label: event.target.value });
+                if (/\/link$/.test(event.target.value)) setPinPicker(true);
+              }}
+            />
+          </label>
+          {pin.link && (
+            <ReferenceChip
+              urn={pin.link}
+              onRemove={() => setPin({ ...pin, link: "" })}
+            />
+          )}
+          <button
+            className="secondary-button"
+            aria-label="Choose pin target"
+            onClick={() => setPinPicker(!pinPicker)}
+          >
+            <Link2 size={14} />
+            Choose a link target
+          </button>
+          {pinPicker && (
+            <ReferencePicker
+              onSelect={(link) => {
+                setPin({
+                  ...pin,
+                  link,
+                  label:
+                    pin.label.replace(/\/link$/, "").trim() ||
+                    "Connected thought",
+                });
+                setPinPicker(false);
+              }}
+              onClose={() => setPinPicker(false)}
+            />
+          )}
+          <div className="modal-actions">
+            <button
+              className="primary-button"
+              onClick={() => {
+                if (pin.id)
+                  updateShape(shapes, pin.id, {
+                    text: pin.label || "Pin",
+                    link: pin.link,
+                  });
+                else
+                  putShape(shapes, {
+                    id: crypto.randomUUID(),
+                    kind: "pin",
+                    x: pin.x,
+                    y: pin.y,
+                    width: 40,
+                    height: 56,
+                    color,
+                    fill: "none",
+                    text: pin.label || "Pin",
+                    link: pin.link,
+                  });
+                setPin(null);
+                setPinPicker(false);
+                setTool("select");
+              }}
+            >
+              Save pin
             </button>
           </div>
         </Modal>

@@ -120,7 +120,10 @@ async function createWindow() {
   let enteringFullscreen = false;
   let nativeFullscreen = owner.isFullScreen();
   let fullscreenWaiters: (() => void)[] = [];
+  let fullscreenFallback: ReturnType<typeof setTimeout> | undefined;
   const ready = () => {
+    clearTimeout(fullscreenFallback);
+    fullscreenFallback = undefined;
     enteringFullscreen = false;
     fullscreenWaiters.splice(0).forEach((resolve) => resolve());
   };
@@ -128,6 +131,15 @@ async function createWindow() {
   // animation ends. Queue an early Escape/X until the window is ready to exit.
   owner.on("enter-html-full-screen", () => {
     enteringFullscreen = !nativeFullscreen;
+    // Some macOS transitions omit the native completion event. Keep early
+    // exits queued through the animation, but never strand an IPC waiter.
+    if (enteringFullscreen) {
+      clearTimeout(fullscreenFallback);
+      fullscreenFallback = setTimeout(() => {
+        nativeFullscreen = owner.isFullScreen();
+        ready();
+      }, 2500);
+    }
   });
   owner.on("enter-full-screen", () => {
     nativeFullscreen = true;

@@ -12,11 +12,15 @@ import {
   Undo2,
   Redo2,
   Maximize2,
+  Link2,
 } from "lucide-react";
 import {
   addSlide,
   LOCAL_ORIGIN,
   makeUndoManager,
+  orderedSlides,
+  moveSlide,
+  slideMoves,
   type SharedRecord,
 } from "@office/model";
 import type { DocumentSession } from "@office/collaboration";
@@ -24,6 +28,11 @@ import { useShared } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
 import { slideLayouts } from "./slideLayouts";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
+import {
+  CopyReference,
+  ReferencePicker,
+  ReferenceChip,
+} from "../shared/References";
 export function SlidesEditor({
   block,
   session,
@@ -40,6 +49,8 @@ export function SlidesEditor({
   const fullscreen = useEditorFullscreen(`block:${block.get("id")}`);
   const slides = block.get("slides") as Y.Array<SharedRecord>;
   useShared(slides);
+  useShared(block);
+  useShared(slideMoves(block));
   const track = useRef<HTMLDivElement>(null);
   const dots = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(0);
@@ -50,7 +61,10 @@ export function SlidesEditor({
   reportActive.current = onActiveSlide;
   const [present, setPresent] = useState(false);
   const undo = useRef<Y.UndoManager | null>(null);
-  const list = slides.toArray();
+  const list = orderedSlides(block);
+  const selectedSlide = useRef<string | null>(null);
+  if (!selectedSlide.current && list[active])
+    selectedSlide.current = list[active].get("id");
   useLayoutEffect(() => {
     const element = dots.current;
     const dot = element?.querySelectorAll<HTMLButtonElement>("button")[active];
@@ -63,11 +77,11 @@ export function SlidesEditor({
       element.scrollLeft += selected.right - bounds.right;
   }, [active, list.length]);
   useEffect(() => {
-    undo.current = makeUndoManager(slides);
+    undo.current = makeUndoManager([slides, slideMoves(block)]);
     return () => undo.current?.destroy();
   }, [slides]);
   function go(index: number, behavior: ScrollBehavior = "instant") {
-    const current = slides.toArray();
+    const current = orderedSlides(block);
     index = Math.max(0, Math.min(index, current.length - 1));
     setActive(index);
     activeIndex.current = index;
@@ -79,6 +93,7 @@ export function SlidesEditor({
     position(index, behavior);
     const slide = current[index];
     if (slide) {
+      selectedSlide.current = slide.get("id");
       onActiveSlide(slide.get("id"));
     }
   }
@@ -101,9 +116,20 @@ export function SlidesEditor({
     const element = track.current;
     if (!element) return;
     const align = () => {
-      const destination = slides
-        .toArray()
-        .findIndex((slide) => slide.get("id") === scrollingTo.current);
+      const preserved = orderedSlides(block).findIndex(
+        (slide) => slide.get("id") === selectedSlide.current,
+      );
+      if (
+        preserved >= 0 &&
+        preserved !== activeIndex.current &&
+        !scrollingTo.current
+      ) {
+        activeIndex.current = preserved;
+        setActive(preserved);
+      }
+      const destination = orderedSlides(block).findIndex(
+        (slide) => slide.get("id") === scrollingTo.current,
+      );
       position(
         destination >= 0 ? destination : activeIndex.current,
         destination >= 0 ? "smooth" : "instant",
@@ -127,9 +153,9 @@ export function SlidesEditor({
         cards.some((card) => card.classList.contains("editor-fullscreen"))
       )
         return;
-      const destination = slides
-        .toArray()
-        .findIndex((slide) => slide.get("id") === scrollingTo.current);
+      const destination = orderedSlides(block).findIndex(
+        (slide) => slide.get("id") === scrollingTo.current,
+      );
       if (destination >= 0) {
         const left = cards[destination]?.offsetLeft - padding;
         if (Math.abs(element.scrollLeft - left) >= 2) {
@@ -148,8 +174,11 @@ export function SlidesEditor({
       });
       activeIndex.current = nearest;
       setActive(nearest);
-      const selected = slides.get(nearest);
-      if (selected) reportActive.current(selected.get("id"));
+      const selected = orderedSlides(block)[nearest];
+      if (selected) {
+        selectedSlide.current = selected.get("id");
+        reportActive.current(selected.get("id"));
+      }
     };
     // scrollend follows native snap animation; debounce supports older engines.
     const scrolling = () => {
@@ -173,9 +202,9 @@ export function SlidesEditor({
   }, [slides]);
   useLayoutEffect(() => {
     if (requestedSlide) {
-      const index = slides
-        .toArray()
-        .findIndex((s) => s.get("id") === requestedSlide);
+      const index = orderedSlides(block).findIndex(
+        (s) => s.get("id") === requestedSlide,
+      );
       if (index >= 0) go(index);
     }
   }, [requestedSlide, requestToken]);
@@ -197,7 +226,7 @@ export function SlidesEditor({
     undo.current?.stopCapturing();
     const slide = addSlide(block, layout);
     setTimeout(() => {
-      const i = slides.toArray().indexOf(slide);
+      const i = orderedSlides(block).indexOf(slide);
       go(i, "smooth");
     }, 30);
   }
@@ -240,7 +269,7 @@ export function SlidesEditor({
           onClick={() => {
             if (slide)
               session.doc.transact(
-                () => slides.delete(Math.min(active, slides.length - 1), 1),
+                () => slides.delete(slides.toArray().indexOf(slide), 1),
                 LOCAL_ORIGIN,
               );
           }}
@@ -263,6 +292,7 @@ export function SlidesEditor({
               session={session}
               index={index}
               current={index === active}
+              block={block}
             />
           ))}
           {!list.length && (
@@ -368,14 +398,25 @@ function SlideCard({
   session,
   index,
   current,
+  block,
 }: {
   slide: SharedRecord;
   session: DocumentSession;
   index: number;
   current: boolean;
+  block: SharedRecord;
 }) {
   useShared(slide);
   const fullscreen = useEditorFullscreen(`slide:${slide.get("id")}`);
+  const [linkPicker, setLinkPicker] = useState(false);
+  const linkURN = `${session.id}:${block.get("id")}:${slide.get("id")}`;
+  function link(urn: string) {
+    session.doc.transact(() => {
+      if (!slide.has("links")) slide.set("links", new Y.Map<string>());
+      slide.get("links").set(crypto.randomUUID(), urn);
+    }, LOCAL_ORIGIN);
+    setLinkPicker(false);
+  }
   const layout = slideLayouts[slide.get("layout")] ?? slideLayouts.content;
   const Component = layout.component;
   const picker = (
@@ -415,6 +456,45 @@ function SlideCard({
           {String(index + 1).padStart(2, "0")} / {layout.label}
         </span>
         <div className="slide-topline-actions">
+          <button
+            className="icon-button"
+            aria-label={`Move slide ${index + 1} earlier`}
+            disabled={index === 0}
+            onClick={() =>
+              moveSlide(
+                block,
+                slide.get("id"),
+                orderedSlides(block)[index - 1].get("id"),
+              )
+            }
+          >
+            <ArrowLeft size={13} />
+          </button>
+          <button
+            className="icon-button"
+            aria-label={`Move slide ${index + 1} later`}
+            disabled={index === orderedSlides(block).length - 1}
+            onClick={() =>
+              moveSlide(
+                block,
+                slide.get("id"),
+                orderedSlides(block)[index + 2]?.get("id") ?? null,
+              )
+            }
+          >
+            <ArrowRight size={13} />
+          </button>
+          <CopyReference
+            urn={linkURN}
+            label={`Copy slide ${index + 1} reference`}
+          />
+          <button
+            className="icon-button"
+            aria-label={`Link from slide ${index + 1}`}
+            onClick={() => setLinkPicker(!linkPicker)}
+          >
+            <Link2 size={14} />
+          </button>
           {!fullscreen.active && picker}
           <button
             className="icon-button fullscreen-enter"
@@ -427,6 +507,27 @@ function SlideCard({
         </div>
       </div>
       <Component slide={slide} session={session} />
+      {!!slide.get("links")?.size && (
+        <div className="slide-reference-list">
+          {[...(slide.get("links") as Y.Map<string>).entries()].map(
+            ([id, urn]) => (
+              <ReferenceChip
+                key={id}
+                urn={urn}
+                onRemove={() => slide.get("links").delete(id)}
+              />
+            ),
+          )}
+        </div>
+      )}
+      {linkPicker && (
+        <div className="slide-link-picker">
+          <ReferencePicker
+            onSelect={link}
+            onClose={() => setLinkPicker(false)}
+          />
+        </div>
+      )}
     </div>
   );
 }

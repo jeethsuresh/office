@@ -1,8 +1,9 @@
 import * as Y from "yjs";
-export type BlockKind = "doc" | "canvas" | "slides";
+export * from "./references";
+export type BlockKind = "doc" | "canvas" | "slides" | "sheet";
 export type SlideLayout = "title" | "content";
 export type SharedRecord = Y.Map<any>;
-export type ShapeKind = "rect" | "ellipse" | "arrow" | "pen" | "text";
+export type ShapeKind = "rect" | "ellipse" | "arrow" | "pen" | "text" | "pin";
 export type Shape = {
   id: string;
   kind: ShapeKind;
@@ -14,6 +15,7 @@ export type Shape = {
   fill: string;
   text?: string;
   points?: number[][];
+  link?: string;
 };
 export const BLOCK_META = {
   doc: {
@@ -30,6 +32,11 @@ export const BLOCK_META = {
     name: "Slides",
     description: "Turn a thought into a story, one slide at a time.",
     color: "#d0a536",
+  },
+  sheet: {
+    name: "Sheet",
+    description: "Work with numbers, formulas, and connected cells.",
+    color: "#6d947d",
   },
 } as const;
 export const LOCAL_ORIGIN = "office-local";
@@ -110,6 +117,7 @@ export function createBlock(
         doc: "Untitled note",
         canvas: "Untitled canvas",
         slides: "Untitled story",
+        sheet: "Untitled sheet",
       }[kind],
   });
   if (kind === "doc") block.set("content", new Y.XmlFragment());
@@ -118,7 +126,9 @@ export function createBlock(
     const slides = new Y.Array<SharedRecord>();
     slides.push([createSlide("title", id + "-title")]);
     block.set("slides", slides);
+    block.set("slideMoves", new Y.Array<BlockMove>());
   }
+  if (kind === "sheet") initializeSheet(block);
   return block;
 }
 export function addBlock(
@@ -170,16 +180,189 @@ export function createSlide(
   slide.set("contentKind", "doc");
   slide.set("content", new Y.XmlFragment());
   slide.set("shapes", new Y.Map<SharedRecord>());
+  slide.set("links", new Y.Map<string>());
   return slide;
 }
 export function addSlide(block: SharedRecord, layout: string, index?: number) {
   const slides = block.get("slides") as Y.Array<SharedRecord>;
   const slide = createSlide(layout);
-  block.doc?.transact(
-    () => slides.insert(index ?? slides.length, [slide]),
-    LOCAL_ORIGIN,
-  );
+  block.doc?.transact(() => {
+    const ordered = orderedSlides(block);
+    const at = index ?? ordered.length;
+    if (slideMoves(block).length) {
+      slides.push([slide]);
+      slideMoves(block).push([
+        {
+          block: slide.get("id"),
+          before: ordered[at]?.get("id") ?? null,
+          after: ordered[at - 1]?.get("id") ?? null,
+        },
+      ]);
+    } else slides.insert(at, [slide]);
+  }, LOCAL_ORIGIN);
   return slide;
+}
+export function orderedSlides(block: SharedRecord): SharedRecord[] {
+  return replayOrder(
+    (block.get("slides") as Y.Array<SharedRecord>).toArray(),
+    slideMoves(block).toArray(),
+  );
+}
+export function slideMoves(block: SharedRecord): Y.Array<BlockMove> {
+  return (
+    block.get("slideMoves") ??
+    block.doc?.getArray<BlockMove>(`slideMoves:${block.get("id")}`) ??
+    new Y.Array<BlockMove>()
+  );
+}
+export function replayOrder<T extends string | SharedRecord>(
+  items: T[],
+  moves: BlockMove[],
+): T[] {
+  const result = [...items];
+  const id = (item: T) => (typeof item === "string" ? item : item.get("id"));
+  for (const move of moves) {
+    const at = result.findIndex((item) => id(item) === move.block);
+    if (at < 0) continue;
+    const [item] = result.splice(at, 1);
+    const before = result.findIndex((item) => id(item) === move.before);
+    const after = result.findIndex((item) => id(item) === move.after);
+    result.splice(
+      before >= 0
+        ? before
+        : after >= 0
+          ? after + 1
+          : move.after === null
+            ? 0
+            : result.length,
+      0,
+      item,
+    );
+  }
+  return result;
+}
+export function moveSlide(
+  block: SharedRecord,
+  id: string,
+  before: string | null,
+) {
+  const list = orderedSlides(block).filter((item) => item.get("id") !== id);
+  if (
+    !(block.get("slides") as Y.Array<SharedRecord>)
+      .toArray()
+      .some((item) => item.get("id") === id) ||
+    id === before
+  )
+    return;
+  const at =
+    before === null
+      ? list.length
+      : list.findIndex((item) => item.get("id") === before);
+  if (at < 0) return;
+  block.doc?.transact(() => {
+    slideMoves(block).push([
+      { block: id, before, after: list[at - 1]?.get("id") ?? null },
+    ]);
+  }, LOCAL_ORIGIN);
+}
+export function initializeSheet(
+  block: SharedRecord,
+  rowCount = 100,
+  columnCount = 12,
+) {
+  const rows = new Y.Array<string>();
+  const columns = new Y.Array<string>();
+  rows.push(Array.from({ length: rowCount }, () => crypto.randomUUID()));
+  columns.push(Array.from({ length: columnCount }, () => crypto.randomUUID()));
+  block.set("rows", rows);
+  block.set("columns", columns);
+  block.set("rowMoves", new Y.Array<BlockMove>());
+  block.set("columnMoves", new Y.Array<BlockMove>());
+  block.set("cells", new Y.Map<SharedRecord>());
+}
+export function sheetAxis(
+  block: SharedRecord,
+  axis: "rows" | "columns",
+): string[] {
+  return replayOrder(
+    (block.get(axis) as Y.Array<string>).toArray(),
+    block.get(axis === "rows" ? "rowMoves" : "columnMoves")?.toArray() ?? [],
+  );
+}
+export function cellID(
+  block: SharedRecord,
+  column: number,
+  row: number,
+): string | null {
+  const r = sheetAxis(block, "rows")[row],
+    c = sheetAxis(block, "columns")[column];
+  return r && c ? `${r}~${c}` : null;
+}
+export function cellPosition(
+  block: SharedRecord,
+  id: string,
+): [number, number] | null {
+  const [r, c] = id.split("~");
+  const row = sheetAxis(block, "rows").indexOf(r),
+    column = sheetAxis(block, "columns").indexOf(c);
+  return row >= 0 && column >= 0 ? [column, row] : null;
+}
+export function columnLabel(index: number): string {
+  let label = "";
+  for (index++; index > 0; index = Math.floor((index - 1) / 26))
+    label = String.fromCharCode(65 + ((index - 1) % 26)) + label;
+  return label;
+}
+export function cellAddress(column: number, row: number) {
+  return `${columnLabel(column)}${row + 1}`;
+}
+export function parseAddress(address: string): [number, number] | null {
+  const match = /^\$?([A-Z]+)\$?([1-9]\d*)$/i.exec(address);
+  if (!match) return null;
+  const column =
+    [...match[1].toUpperCase()].reduce(
+      (n, letter) => n * 26 + letter.charCodeAt(0) - 64,
+      0,
+    ) - 1;
+  return [column, Number(match[2]) - 1];
+}
+export function editSheetAxis(
+  block: SharedRecord,
+  axis: "rows" | "columns",
+  action: "insert" | "delete" | "move",
+  index: number,
+  before?: number,
+) {
+  const shared = block.get(axis) as Y.Array<string>;
+  const moves = block.get(
+    axis === "rows" ? "rowMoves" : "columnMoves",
+  ) as Y.Array<BlockMove>;
+  const list = sheetAxis(block, axis);
+  block.doc?.transact(() => {
+    if (action === "delete") {
+      if (list.length <= 1 || !list[index]) return;
+      shared.delete(shared.toArray().indexOf(list[index]), 1);
+    } else {
+      const id = action === "insert" ? crypto.randomUUID() : list[index];
+      if (!id) return;
+      const remaining = list.filter((item) => item !== id);
+      const at = Math.max(
+        0,
+        Math.min(
+          action === "insert" ? index : (before ?? remaining.length),
+          remaining.length,
+        ),
+      );
+      if (action === "insert") shared.push([id]);
+      moves.push([
+        {
+          block: id,
+          before: remaining[at] ?? null,
+          after: remaining[at - 1] ?? null,
+        },
+      ]);
+    }
+  }, LOCAL_ORIGIN);
 }
 export function updateText(text: Y.Text, value: string) {
   const before = text.toString();

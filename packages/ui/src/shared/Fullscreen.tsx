@@ -11,7 +11,7 @@ import {
 } from "react";
 import { flushSync } from "react-dom";
 import type * as Y from "yjs";
-import type { SharedRecord } from "@office/model";
+import { orderedSlides, type SharedRecord } from "@office/model";
 import {
   DocumentNavigationContext,
   type DocumentNavigation,
@@ -248,9 +248,7 @@ export function EditorFullscreenProvider({
     if (!block) return;
     let id = `block:${blockID}`;
     if (slideID) {
-      const slide = (block.get("slides") as Y.Array<SharedRecord>)
-        .toArray()
-        .find((s) => s.get("id") === slideID);
+      const slide = orderedSlides(block).find((s) => s.get("id") === slideID);
       if (!slide) return;
       const embedded = current.current?.id.match(/:(doc|canvas)$/);
       const deck = current.current?.id === `block:${blockID}`;
@@ -303,7 +301,9 @@ export function EditorFullscreenProvider({
         if (
           sibling !== node &&
           sibling instanceof HTMLElement &&
-          !sibling.matches("[data-block-id], [data-slide-id]")
+          !sibling.matches(
+            "[data-block-id], [data-slide-id], [data-office-portal]",
+          )
         ) {
           siblings.push({ element: sibling, inert: sibling.inert });
           sibling.inert = true;
@@ -337,6 +337,7 @@ export function EditorFullscreenProvider({
       if (event.key === "Escape") {
         if (container.querySelector(".minimap.is-dragging")) return;
         if (container.querySelector(".minimap-context-menu")) return;
+        if (root.querySelector(".slash-popover, .reference-picker")) return;
         event.preventDefault();
         event.stopImmediatePropagation();
         void exit();

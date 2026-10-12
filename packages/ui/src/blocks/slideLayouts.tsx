@@ -1,10 +1,13 @@
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import type { DocumentSession } from "@office/collaboration";
 import { updateText, type SharedRecord } from "@office/model";
 import * as Y from "yjs";
 import { useShared } from "../shared/hooks";
 import { DocEditor } from "./DocEditor";
 import { CanvasEditor } from "./CanvasEditor";
+import { SlashPopover, type SlashState } from "../shared/References";
+import { useOfficeData } from "../shared/OfficeData";
+import { LOCAL_ORIGIN } from "@office/model";
 export type SlideProps = {
   slide: SharedRecord;
   session: DocumentSession;
@@ -22,16 +25,67 @@ export function SharedText({
   readOnly?: boolean;
 }) {
   useShared(text);
+  const data = useOfficeData(),
+    [slash, setSlash] = useState<SlashState | null>(null);
   return (
-    <textarea
-      className={`shared-text ${className ?? ""}`}
-      aria-label={label}
-      value={text.toString()}
-      placeholder={label}
-      readOnly={readOnly}
-      rows={1}
-      onChange={(e) => updateText(text, e.target.value)}
-    />
+    <>
+      <textarea
+        className={`shared-text ${className ?? ""}`}
+        aria-label={label}
+        value={text.toString()}
+        placeholder={label}
+        readOnly={readOnly}
+        rows={1}
+        onChange={(event) => {
+          updateText(text, event.target.value);
+          const before = event.target.value.slice(
+            0,
+            event.target.selectionStart,
+          );
+          const match = /(?:^|\s)(\/\w*)$/.exec(before);
+          const bounds = event.currentTarget.getBoundingClientRect();
+          setSlash(
+            match
+              ? {
+                  query: match[1],
+                  from: before.length - match[1].length,
+                  to: before.length,
+                  x: bounds.left,
+                  y: bounds.bottom,
+                }
+              : null,
+          );
+        }}
+        onKeyDown={(event) => {
+          if (slash && event.key === "Enter") {
+            event.preventDefault();
+            event.currentTarget
+              .closest(".slide-card")
+              ?.querySelector<HTMLButtonElement>(".slash-command-list button")
+              ?.click();
+          }
+        }}
+      />
+      {slash && (
+        <SlashPopover
+          state={slash}
+          onClose={() => setSlash(null)}
+          onLink={(urn) => {
+            const slide = text.parent as Y.Map<any>;
+            text.doc?.transact(() => {
+              if (!slide.has("links")) slide.set("links", new Y.Map<string>());
+              slide.get("links").set(crypto.randomUUID(), urn);
+              updateText(
+                text,
+                text.toString().slice(0, slash.from) +
+                  text.toString().slice(slash.to),
+              );
+            }, LOCAL_ORIGIN);
+            setSlash(null);
+          }}
+        />
+      )}
+    </>
   );
 }
 function TitleSlide({ slide, readOnly }: SlideProps) {

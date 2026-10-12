@@ -8,7 +8,12 @@ import {
   type PointerEvent,
 } from "react";
 import * as Y from "yjs";
-import { BLOCK_META, type BlockKind, type SharedRecord } from "@office/model";
+import {
+  BLOCK_META,
+  orderedSlides,
+  type BlockKind,
+  type SharedRecord,
+} from "@office/model";
 import { Plus, Trash2, Undo2 } from "lucide-react";
 import { MinimapSlides } from "./MinimapSlides";
 import { BlockPreview } from "./BlockPreview";
@@ -113,10 +118,7 @@ export function Minimap({
           const id = block.get("id") as string;
           const kind = block.get("kind") as BlockKind;
           const title = block.get("title") || "Untitled block";
-          const slides =
-            kind === "slides"
-              ? (block.get("slides") as Y.Array<SharedRecord>).toArray()
-              : [];
+          const slides = kind === "slides" ? orderedSlides(block) : [];
           return (
             <div
               key={id}

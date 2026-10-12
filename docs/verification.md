@@ -4,11 +4,11 @@ Verified on macOS arm64 with Bun 1.4.0 and Go 1.25.2.
 
 - Fresh Bun dependency installation and locked workspace resolution: passed.
 - `bun run typecheck`: passed.
-- `bun test`: eight CRDT model tests passed, including reorder/insert/edit convergence, record identity, replay, and local undo preserving remote moves.
+- `bun test`: seventeen model/calculation tests passed, including existing CRDT behavior, formula scheduling/errors/spills, large ranges, persistent references, shared record transactions, and fixed/relative fill.
 - `bun run test:race`: seven Go store/server tests passed under the race detector.
 - `bun run build`: production UI, Go executable, Electron main, and sandboxed preload built successfully.
 - `bun run package:dir`: native macOS arm64 `apps/desktop/release/mac-arm64/office.app` built with bundled Go/UI and the Office icon. The local development signing identity was discovered by electron-builder; the app was not notarized.
-- Thirty Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
+- Thirty-six Playwright acceptance tests passed, with native tests launched against the rebuilt packaged executable.
 
 The acceptance suite verifies:
 
@@ -33,8 +33,15 @@ The acceptance suite verifies:
 18. Mouse and real Chromium touch drags reorder blocks while preserving the original editor DOM. Another browser edits during the drag; content and order converge, and order survives reload. Gap insertion uses its clicked neighbor, structural undo restores both insertion and movement, and Alt+Up/Down reorders by keyboard. Fullscreen drag cancellation, reordering, and insertion preserve the native host and focus the new editor; Escape gives the insertion dialog priority. Tooltip geometry is asserted entirely beside normal and expanded fullscreen maps.
 19. Newly added slides animate through multiple intermediate scroll positions on desktop/mobile, with reduced-motion behavior also checked. Clickable carousel dots and previous/next arrows navigate to the expected snapped slide and disable at the ends. Twelve-slide rapid-addition checks verify delayed scroll-end events cannot replace the new slide selection with the previous one.
 20. Right-click and Shift+F10 open a named block menu without selecting that block; Escape restores focus and outside interaction dismisses it. Deletion confirms the targeted title, syncs to a second client, and undo restores the content. Context clicking a browsed row in a deck longer than five slides deletes its entire deck. Real mobile touch holds open the same menu while short taps, drags, and later keyboard navigation stay distinct. Normal and expanded fullscreen maps support deletion; deleting the focused block follows a surviving editor. The old previous/next slide buttons are absent from the left rail, with carousel/minimap navigation preserved.
+21. Glide spreadsheet rendering and direct overlay editing, formula-bar editing, cascades, conditional/error formulas, dynamic-array results, row moves with updated human addresses, undo, reload persistence, and fullscreen geometry on desktop/mobile. The packaged Electron check edits an actual grid overlay and follows heading/cell references while keeping the same native fullscreen host.
+22. Full browser offline reload from cached production assets, local formula recalculation without Go/network access, and merging another client's cell edit after reconnect. Service-worker installation is asserted before the partition.
+23. Slash links to headings, individual slides, pins, and cells across documents; persistent targets after row/slide moves; lazy labels after renames; live peer cell values inside references; deep-link reload and exact cell/slide selection; pin focus and backlinks; mobile picker/keyboard access and same-document fullscreen navigation. Ordinary search matches human labels/paths, avoiding accidental matches inside random IDs; direct URN lookup remains available.
+
+Calculation checks separately cover 10,000-cell ranges, incremental invalidation of dependent formulas, cycle termination, spill references/collisions, cross-sheet formulas, deletion/undo restoring IDs, concurrent row/cell convergence, duplicate-heading identity, fixed/relative fill, atomic prevalidation, deterministic random values, and pin/slide record updates preserving shared objects. See [calculation and reference semantics](spreadsheets-and-references.md) for supported boundaries; the binding count does not imply complete Excel parity.
 
 Native fullscreen verification covers early Escape during the macOS transition, the bottom X, and entry from an already-fullscreen window. A dedicated preload operation waits for the native fullscreen animation, preventing a window-size change from leaving the renderer stuck in fullscreen. Existing collaboration and persistence checks passed after these UI changes.
+
+The native completion event can be omitted on macOS. The readiness IPC now has a 2.5-second fallback while still resolving immediately on completion; the already-fullscreen test observes window state instead of waiting indefinitely for an event. Spreadsheet and individual-slide positioning are explicitly verified at the viewport origin. Grid checks wait for the editor's asynchronous next-row selection before choosing another cell.
 
 The workspace sidebar refinement was rechecked with all seven workspace/Electron acceptance tests against the rebuilt package. They verify sidebar/toggle absence while browsing, persistence across reloads, restoration when opening a document, and Cmd/Ctrl+K focusing folder search. Typecheck and the production/native build pass.
 

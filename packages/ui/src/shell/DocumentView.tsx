@@ -7,6 +7,7 @@ import {
   Layout,
   PenTool,
   Plus,
+  Table2,
 } from "lucide-react";
 import {
   blocks as getBlocks,
@@ -29,7 +30,10 @@ import { CanvasEditor } from "../blocks/CanvasEditor";
 import { SlidesEditor } from "../blocks/SlidesEditor";
 import { Minimap } from "./Minimap";
 import { EditorFullscreenProvider } from "../shared/Fullscreen";
-const icons = { doc: FileText, canvas: PenTool, slides: Layout };
+import { SheetEditor } from "../blocks/SheetEditor";
+import { CopyReference, Backlinks } from "../shared/References";
+import { ReferenceNavigation } from "../shared/ReferenceNavigation";
+const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
 function Peek({
   block,
   direction,
@@ -74,7 +78,9 @@ function Peek({
             .toArray()
             .map((slide) => slide.get("title").toString())
             .join(" / ")
-        : `${(block.get("shapes") as Y.Map<SharedRecord>).size} objects on an open canvas`;
+        : kind === "sheet"
+          ? `${block.get("rows").length} rows · ${block.get("columns").length} columns`
+          : `${(block.get("shapes") as Y.Map<SharedRecord>).size} objects on an open canvas`;
   const shapes = kind === "canvas" ? shapeValues(block.get("shapes")) : [];
   return (
     <button
@@ -183,7 +189,11 @@ export function DocumentView({ session }: { session: DocumentSession }) {
   }
   useEffect(() => {
     if (!list.some((b) => b.get("id") === active) && list.length) {
-      setActive(list[0].get("id"));
+      setActive((previous) =>
+        list.some((block) => block.get("id") === previous)
+          ? previous
+          : list[0].get("id"),
+      );
       session.setActiveBlock(list[0].get("id"));
     }
   }, [blockIDs, active]);
@@ -206,6 +216,12 @@ export function DocumentView({ session }: { session: DocumentSession }) {
         onDeleteBlock: setDeleteID,
       }}
     >
+      <ReferenceNavigation />
+      <div
+        id="portal"
+        data-office-portal
+        style={{ position: "fixed", left: 0, top: 0, zIndex: 21000 }}
+      />
       <div className="document-view">
         <div className="block-viewport">
           {!list.length && (
@@ -274,6 +290,11 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     value={block.get("title") ?? ""}
                     onChange={(e) => block.set("title", e.target.value)}
                   />
+                  <CopyReference
+                    urn={`${session.id}:${id}:_`}
+                    label="Copy block reference"
+                  />
+                  <Backlinks urn={`${session.id}:${id}:_`} />
                 </div>
                 <div className="block-body">
                   {kind === "doc" ? (
@@ -303,6 +324,8 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                       }
                       requestToken={request?.token}
                     />
+                  ) : kind === "sheet" ? (
+                    <SheetEditor block={block} session={session} />
                   ) : (
                     <p>This block type is not registered.</p>
                   )}

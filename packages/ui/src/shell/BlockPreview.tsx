@@ -1,5 +1,10 @@
 import * as Y from "yjs";
-import { shapeValues, type SharedRecord, type Shape } from "@office/model";
+import {
+  shapeValues,
+  cellID,
+  type SharedRecord,
+  type Shape,
+} from "@office/model";
 
 function plainText(node: Y.XmlFragment | Y.XmlElement | Y.XmlText): string {
   if (node instanceof Y.XmlText)
@@ -174,6 +179,9 @@ function CanvasPreview({ shapes }: { shapes?: Y.Map<SharedRecord> }) {
               {shape.text?.slice(0, 40)}
             </text>
           )}
+          {shape.kind === "pin" && (
+            <circle cx={shape.x} cy={shape.y} r={14} fill={shape.color} />
+          )}
         </g>
       ))}
       {!values.length && (
@@ -193,6 +201,40 @@ function CanvasPreview({ shapes }: { shapes?: Y.Map<SharedRecord> }) {
   );
 }
 export function BlockPreview({ block }: { block: SharedRecord }) {
+  if (block.get("kind") === "sheet")
+    return (
+      <svg
+        className="block-preview sheet-preview"
+        aria-hidden="true"
+        viewBox="0 0 120 150"
+      >
+        <g stroke="currentColor" strokeWidth=".5" opacity=".3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <path key={`c${index}`} d={`M${index * 22} 5V145`} />
+          ))}
+          {Array.from({ length: 14 }, (_, index) => (
+            <path key={`r${index}`} d={`M0 ${index * 10 + 5}H115`} />
+          ))}
+        </g>
+        {Array.from({ length: 13 }, (_, row) =>
+          Array.from({ length: 5 }, (_, col) => {
+            const id = cellID(block, col, row);
+            const input = id && block.get("cells").get(id)?.get("input");
+            return input ? (
+              <rect
+                key={`${row}-${col}`}
+                x={col * 22 + 3}
+                y={row * 10 + 8}
+                width={Math.min(16, String(input).length * 2.2)}
+                height={2.2}
+                fill="currentColor"
+                opacity={String(input).startsWith("=") ? 0.8 : 0.4}
+              />
+            ) : null;
+          }),
+        )}
+      </svg>
+    );
   return block.get("kind") === "canvas" ? (
     <CanvasPreview shapes={block.get("shapes")} />
   ) : (

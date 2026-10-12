@@ -1,5 +1,6 @@
 import { createContext, useContext } from "react";
 import type { SharedRecord } from "@office/model";
+import { orderedSlides } from "@office/model";
 import type * as Y from "yjs";
 
 export type NavigationItem = {
@@ -32,7 +33,7 @@ export function navigationItems(blocks: SharedRecord[]): NavigationItem[] {
     };
     const slides = block.get("slides") as Y.Array<SharedRecord> | undefined;
     if (base.kind !== "slides" || !slides?.length) return [base];
-    return slides.toArray().map((slide, i) => ({
+    return orderedSlides(block).map((slide, i) => ({
       ...base,
       slide: slide.get("id"),
       title: slide.get("title")?.toString() || `Slide ${i + 1}`,

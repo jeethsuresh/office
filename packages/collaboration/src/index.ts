@@ -34,12 +34,14 @@ export class DocumentSession {
     readonly baseURL: string,
     user: User,
     namespace = baseURL,
+    observeOnly = false,
   ) {
     this.persistence = new IndexeddbPersistence(
       `office:${namespace}:${id}`,
       this.doc,
     );
-    this.awareness.setLocalStateField("user", user);
+    if (observeOnly) this.awareness.setLocalState(null);
+    else this.awareness.setLocalStateField("user", user);
     this.doc.on("update", this.onUpdate);
     this.awareness.on("update", this.onAwareness);
     this.awareness.on("change", this.emit);

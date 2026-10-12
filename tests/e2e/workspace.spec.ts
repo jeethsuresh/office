@@ -392,7 +392,11 @@ test("wide minimap previews reflect content and own insertion, deletion, and und
       "1",
     );
     await expect(map.locator(".canvas-preview rect")).toHaveCount(1);
-    await expect(page.locator(".block-heading button")).toHaveCount(0);
+    await expect(
+      page
+        .locator(".block-heading")
+        .getByRole("button", { name: /Add|Delete|Remove/i }),
+    ).toHaveCount(0);
     await map
       .getByRole("button", {
         name: "Go to doc block: Research outline",

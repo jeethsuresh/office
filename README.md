@@ -64,6 +64,8 @@ Output is under `apps/desktop/release/`. The app includes the compiled Go execut
 
 ## Use the workspace
 
+Office now includes **Sheet** blocks and persistent cross-document references. See [spreadsheet and reference APIs](docs/spreadsheets-and-references.md) for the model, formula semantics, and supported boundaries.
+
 - Organize documents in nested, collapsible folders. Create, rename, move, search, and delete documents and folders. Nonempty folders must be emptied before deletion.
 - Click the **Office** logo to browse the workspace. The sidebar automatically hides while browsing and resumes its document preference when a document opens. Open folders/documents, use breadcrumbs or browser history to move around, and switch between a list and icons. Sort by name, type, or updated time in either direction; view and sort preferences persist. Item menus rename, move, or delete; new items start in the current folder. Cmd/Ctrl+K focuses folder search here.
 - Add a **Doc**, **Canvas**, or **Slides** block from the minimap: choose before/after the selected block or either end of the document. Delete the selected block or undo from the same map controls. Click the previews to jump to neighboring blocks; beginning/end add buttons remain available.
@@ -74,6 +76,8 @@ Output is under `apps/desktop/release/`. The app includes the compiled Go execut
 - Hover or focus the presence avatars to see everyone’s name, including people beyond the four visible avatars. Tap on mobile to open the list.
 - Doc: rich text, headings, lists, quotes, code, undo/redo, Markdown shortcuts/paste, Markdown insertion and export, shared cursor labels.
 - Canvas: rectangle, ellipse, arrow, freehand, text, colors/fill, selection/dragging, labels on shapes, pan/zoom/fit, undo/redo, SVG export, live collaborator pointers. Keyboard shortcuts are V/H/R/O/A/P/T while the workspace is focused; Delete removes selection; Cmd/Ctrl+Z undoes local changes. Use the hand tool to pan on touch screens.
+- Sheet: select or edit cells in the grid, use the address/formula bar, enter formulas such as `=SUM(A1:A10)`, paste ranges, fill cells, resize/move columns, insert/move/delete rows and columns, and undo/redo. The local formula worker handles dependencies, errors, cross-sheet formulas, and array spills. The green minimap shows a table preview. Fullscreen and the same grid work on mobile. Production assets and previously loaded documents also reopen offline.
+- Type **/link** in a note, slide title/subtitle, canvas text, or spreadsheet formula bar to choose a document, block, heading, slide, pin, or cell. Links use persistent IDs and display current names, slide positions, and cell addresses/values. Copy reference controls expose the three-part notation. Create a **Pin (I)** on a canvas to name an anchor and optionally link it; double-click a linked pin to open its target. Block headings show backlinks. Links within a document navigate without leaving fullscreen.
 - Fullscreen: use the expand button at the bottom of any editor’s left rail, or in an individual slide’s header. Notes, canvases, decks, individual slides, and embedded slide content can all fill the screen. Exit with the X at the bottom of the rail or Escape. A compact previous/current/next map sits above X. Hover to expand it over the controls; keyboard activation or a tap also opens it. Navigate to any block or slide without leaving fullscreen, and collapse the map to return to the controls. Editing, selection, and canvas position are retained. Mobile browsers without the native API use the same distraction-free view inside the viewport.
 - Slides: scroll horizontally with the trackpad/wheel or swipe; the track snaps to each slide and updates the map/counter. Slide markers and the clickable carousel dots/arrows also navigate horizontally. The left controls rail holds editing and presentation controls. Adding a slide scrolls smoothly into it; reduced-motion settings use immediate positioning. Add a title or content layout, switch layouts, add a note or canvas to a content slide, and present using arrow keys and Escape. Switching content mode preserves the note and drawing.
 - Cmd/Ctrl+K opens document search. Edits save automatically. Offline content merges when the connection returns.
@@ -99,6 +103,7 @@ The acceptance checks cover two real browser clients, offline text convergence, 
 - `apps/web`: Vite entry point and build configuration.
 - `apps/desktop`: sandboxed Electron wrapper and packaging resources.
 - `packages/model`: Yjs schema and mutations, independent of React and networking.
+- `packages/spreadsheet`: renderer-independent formula binding/evaluation, pinned SheetXL function sources, and calculation worker.
 - `packages/collaboration`: WebSocket transport, reconnects, awareness, IndexedDB persistence.
 - `packages/ui`: shell and reusable doc/canvas/slide editors.
 - `backend`: Go workspace store, journal persistence, static UI server, WebSocket rooms.

@@ -1,5 +1,7 @@
 # Architecture
 
+Spreadsheets and cross-block references extend the same shared model and transports. `DocumentAPI` supplies typed cell/record transactions and changeset subscriptions; `OfficeData` composes target resolution, observe-only foreign sessions, and versioned formula-worker results. Spreadsheet coordinates and slide positions are views over persistent IDs and placement logs. Tiptap heading IDs are assigned after its active transaction, while inline reference nodes render current target labels and values. Glide's overlay portal is inside the stable fullscreen host. Production builds precache the worker and lazy grid editors for offline reload. See [spreadsheets and references](spreadsheets-and-references.md) for API and calculation details.
+
 ## Runtime
 
 Electron starts `office-server` on a loopback port chosen on the first launch and retained in `desktop-port` and loads the UI from that same server. The Go process announces readiness as one JSON stdout line. In development, Electron starts Go on port 4317 and loads Vite on 5174; Vite proxies `/api` including WebSockets to Go. In production, Go serves built web assets and the APIs from one origin. A standalone browser/mobile session uses exactly the same modules.

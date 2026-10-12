@@ -26,6 +26,7 @@ import { DocumentView } from "./shell/DocumentView";
 import { WorkspaceDialog, type WorkspaceAction } from "./shell/WorkspaceDialog";
 import { WorkspaceBrowser } from "./shell/WorkspaceBrowser";
 import { Presence } from "./shell/Presence";
+import { OfficeDataProvider } from "./shared/OfficeData";
 const empty: Workspace = { id: "", folders: [], documents: [] };
 type Route =
   { view: "workspace"; folder: string } | { view: "document"; id: string };
@@ -90,12 +91,14 @@ function ConnectedDocument({
   api,
   user,
   onSession,
+  documents,
 }: {
   id: string;
   workspaceID: string;
   api: WorkspaceAPI;
   user: User;
   onSession: (session: DocumentSession | null) => void;
+  documents: DocumentMeta[];
 }) {
   const [session] = useState(
     () =>
@@ -109,7 +112,17 @@ function ConnectedDocument({
     };
   }, [session]);
   useEffect(() => session.setUser(user), [user, session]);
-  return <DocumentView session={session} />;
+  return (
+    <OfficeDataProvider
+      session={session}
+      documents={documents}
+      api={api}
+      user={user}
+      namespace={workspaceID || api.baseURL}
+    >
+      <DocumentView session={session} />
+    </OfficeDataProvider>
+  );
 }
 export function App() {
   const api = useMemo(() => new WorkspaceAPI(), []);
@@ -366,6 +379,7 @@ export function App() {
             api={api}
             user={user}
             onSession={setSession}
+            documents={workspace.documents}
           />
         ) : (
           <div className="workspace-empty">

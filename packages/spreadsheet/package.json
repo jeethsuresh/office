@@ -1,0 +1,19 @@
+{
+  "name": "@office/spreadsheet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./formula": "./src/formula.ts"
+  },
+  "dependencies": {
+    "@office/model": "workspace:*",
+    "@sheetxl/formulas": "0.7.27",
+    "@sheetxl/primitives": "0.7.27",
+    "bahttext": "^2.4.0",
+    "bessel": "^1.0.2",
+    "jstat": "^1.9.6",
+    "yjs": "^13.6.27"
+  }
+}

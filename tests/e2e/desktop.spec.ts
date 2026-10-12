@@ -6,7 +6,120 @@ import path from "node:path";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { once } from "node:events";
+import { newBlock, setCell, selectCell } from "./office-fixtures";
 const root = path.resolve(import.meta.dirname, "../..");
+test("Electron runs the spreadsheet worker and opens heading/cell links within the same native fullscreen host", async () => {
+  test.skip(process.platform !== "darwin", "Native check targets macOS");
+  const data = await mkdtemp(path.join(os.tmpdir(), "office-native-grid-"));
+  const app = await electron.launch({
+    executablePath:
+      process.env.OFFICE_PACKAGED_PATH ??
+      path.join(
+        root,
+        "apps/desktop/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron",
+      ),
+    args: process.env.OFFICE_PACKAGED_PATH
+      ? []
+      : [path.join(root, "apps/desktop")],
+    env: {
+      ...process.env,
+      ELECTRON_RUN_AS_NODE: "",
+      OFFICE_DATA: data,
+      OFFICE_PROFILE: path.join(data, "profile"),
+    },
+  });
+  try {
+    const page = await app.firstWindow();
+    await expect(page.getByText("All changes saved")).toBeVisible();
+    await newBlock(page, "Doc", "Native links");
+    await page
+      .locator(".office-block.is-active")
+      .getByLabel("Document text", { exact: true })
+      .fill("Native anchor");
+    await page.getByRole("button", { name: "Heading 1", exact: true }).click();
+    await expect(
+      page.locator(".office-block.is-active .prose h1"),
+    ).toHaveAttribute("data-office-anchor", /h-/);
+    await newBlock(page, "Sheet", "Native numbers");
+    await setCell(page, "A1", "10", "10");
+    await setCell(page, "B1", "=A1*3", "30");
+    await page
+      .getByRole("button", { name: "Fullscreen spreadsheet", exact: true })
+      .click();
+    await expect(page.locator(".sheet-editor.editor-fullscreen")).toBeVisible();
+    await page.evaluate(async () => {
+      await (window as any).office.waitForFullscreen();
+      (window as any).gridHost = document.fullscreenElement;
+    });
+    await page
+      .locator(".sheet-grid .dvn-scroller")
+      .first()
+      .dblclick({ position: { x: 100, y: 50 } });
+    await expect(page.locator(".gdg-input")).toBeVisible();
+    await page.locator(".gdg-input").fill("30");
+    await page.locator(".gdg-input").press("Enter");
+    await expect(page.locator(".gdg-input")).toHaveCount(0);
+    await expect(page.getByLabel("Cell address", { exact: true })).toHaveValue(
+      "A2",
+    );
+    await selectCell(page, "B1");
+    await expect(page.getByLabel("Selected cell result")).toHaveText("B1: 90");
+    await selectCell(page, "C1");
+    await page
+      .getByLabel("Cell value or formula", { exact: true })
+      .fill("/link");
+    await page
+      .getByLabel("Cell value or formula", { exact: true })
+      .press("Enter");
+    const search = page.getByRole("combobox", {
+      name: "Search link targets",
+      exact: true,
+    });
+    await search.fill("Native anchor");
+    await expect(
+      page.getByRole("listbox", { name: "Link targets" }).getByRole("option"),
+    ).toHaveCount(1);
+    await search.press("Enter");
+    await expect(page.getByLabel("Selected cell result")).toContainText(
+      "Native anchor",
+    );
+    await page
+      .getByRole("button", { name: "Open linked cell target", exact: true })
+      .click();
+    await expect(page.locator(".doc-editor.editor-fullscreen")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.fullscreenElement === (window as any).gridHost,
+      ),
+    ).toBe(true);
+    await page
+      .getByRole("button", { name: "Insert reference", exact: true })
+      .click();
+    await page.getByRole("button", { name: /Link to/ }).click();
+    await search.fill("Native numbers A1");
+    await expect(
+      page.getByRole("listbox", { name: "Link targets" }).getByRole("option"),
+    ).toHaveCount(1);
+    await search.press("Enter");
+    await page
+      .getByRole("button", { name: "Open reference: A1", exact: true })
+      .click();
+    await expect(page.locator(".sheet-editor.editor-fullscreen")).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.fullscreenElement === (window as any).gridHost,
+      ),
+    ).toBe(true);
+    await page.screenshot({ path: "test-results/electron-spreadsheet.png" });
+    await page
+      .getByRole("button", { name: "Exit fullscreen", exact: true })
+      .click();
+    await expect(page.locator(".editor-fullscreen")).toHaveCount(0);
+  } finally {
+    await app.close();
+    await rm(data, { recursive: true, force: true });
+  }
+});
 test("Electron launches its bundled Go/UI and quits its owned backend", async () => {
   test.skip(
     process.platform !== "darwin",
@@ -209,14 +322,17 @@ test("Electron launches its bundled Go/UI and quits its owned backend", async ()
     ).toBeVisible();
     // Entering element focus from an already-fullscreen native window must
     // also exit cleanly, without waiting for an event that will not occur.
-    await app.evaluate(async ({ BrowserWindow }) => {
+    await app.evaluate(({ BrowserWindow }) => {
       const win = BrowserWindow.getAllWindows()[0];
-      if (!win.isFullScreen())
-        await new Promise<void>((resolve) => {
-          win.once("enter-full-screen", () => resolve());
-          win.setFullScreen(true);
-        });
+      if (!win.isFullScreen()) win.setFullScreen(true);
     });
+    await expect
+      .poll(() =>
+        app.evaluate(({ BrowserWindow }) =>
+          BrowserWindow.getAllWindows()[0].isFullScreen(),
+        ),
+      )
+      .toBe(true);
     await page
       .getByRole("button", { name: "Fullscreen note", exact: true })
       .click();
