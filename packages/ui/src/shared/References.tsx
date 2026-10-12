@@ -48,6 +48,18 @@ const icons = {
   pin: MapPin,
   cell: Table2,
 };
+export function referenceText(target: Target) {
+  if (target.kind === "cell")
+    return target.value === "" || target.value == null
+      ? "Empty cell"
+      : target.value;
+  const words = target.label.trim().split(/\s+/);
+  const text = words.slice(0, 6).join(" ");
+  return text.slice(0, 80) + (words.length > 6 || text.length > 80 ? "…" : "");
+}
+export function referenceTitle(target: Target) {
+  return `${target.detail} / ${target.label}\n${target.urn}`;
+}
 export function ReferenceChip({
   urn,
   onRemove,
@@ -78,20 +90,22 @@ export function ReferenceChip({
     >
       <button
         type="button"
-        title={target ? `${target.detail} / ${target.label}\n${urn}` : urn}
+        title={target ? referenceTitle(target) : urn}
         aria-label={
-          target ? `Open reference: ${target.label}` : "Missing reference"
+          target
+            ? `Open reference: ${referenceText(target)}`
+            : "Missing reference"
         }
         disabled={!target}
         onClick={() => void data.open(urn)}
       >
         <Icon size={13} />
         <span>
-          {target?.label ??
-            (loading ? "Loading reference…" : "Missing reference")}
-          {target?.kind === "cell" && target.value !== ""
-            ? ` · ${target.value}`
-            : ""}
+          {target
+            ? referenceText(target)
+            : loading
+              ? "Loading reference…"
+              : "Missing reference"}
         </span>
       </button>
       {onRemove && (
@@ -166,7 +180,9 @@ export function ReferencePicker({
       direct
         ? target.urn === referenceURN(direct)
         : terms.every((term) =>
-            `${target.label} ${target.detail}`.toLowerCase().includes(term),
+            `${target.label} ${target.detail} ${target.value ?? ""}`
+              .toLowerCase()
+              .includes(term),
           ),
     )
     .slice(0, 100);
@@ -246,18 +262,13 @@ export function ReferencePicker({
               aria-selected={index === selected}
               id={`link-option-${index}`}
               key={target.urn}
+              title={referenceTitle(target)}
               onMouseEnter={() => setSelected(index)}
               onClick={() => onSelect(target.urn)}
             >
               <Icon size={15} />
               <span>
-                <strong>{target.label}</strong>
-                <small>
-                  {target.detail}
-                  {target.kind === "cell" && target.value
-                    ? ` · ${target.value}`
-                    : ""}
-                </small>
+                <strong>{referenceText(target)}</strong>
               </span>
               <em>{target.kind}</em>
             </button>
@@ -411,9 +422,10 @@ export function Backlinks({ urn }: { urn: string }) {
             links.map((link, index) => (
               <button
                 key={`${link.source.urn}-${index}`}
+                title={referenceTitle(link.source)}
                 onClick={() => void data.open(link.source.urn)}
               >
-                {link.source.detail} / {link.source.label}
+                {referenceText(data.resolve(link.source.urn) ?? link.source)}
               </button>
             ))
           ) : (

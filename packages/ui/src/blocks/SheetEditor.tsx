@@ -18,8 +18,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Trash2,
-  Undo2,
-  Redo2,
   Link2,
   ExternalLink,
 } from "lucide-react";
@@ -47,6 +45,7 @@ import { useShared } from "../shared/hooks";
 import { useOfficeData, useOfficeRevision } from "../shared/OfficeData";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 import { ToolButton } from "../shared/Toolbar";
+import { BlockActions, downloadFile } from "../shared/BlockActions";
 import {
   SlashPopover,
   CopyReference,
@@ -208,6 +207,32 @@ export function SheetEditor({
     );
     undo.current?.stopCapturing();
   }
+  function clearCells() {
+    const ranges = selection.current
+      ? [selection.current.range, ...selection.current.rangeStack]
+      : [];
+    const ids = new Set<string>();
+    for (const range of ranges)
+      for (let row = range.y; row < range.y + range.height; row++)
+        for (let column = range.x; column < range.x + range.width; column++) {
+          const id = cellID(block, column, row);
+          if (id) ids.add(id);
+        }
+    for (const row of selection.rows.toArray())
+      for (let column = 0; column < columns.length; column++)
+        ids.add(cellID(block, column, row)!);
+    for (const column of selection.columns.toArray())
+      for (let row = 0; row < rows.length; row++)
+        ids.add(cellID(block, column, row)!);
+    if (!ids.size && selected.current) ids.add(selected.current);
+    undo.current?.stopCapturing();
+    data.writeCells(
+      session.id,
+      blockID,
+      [...ids].map((identifier) => ({ identifier, input: "" })),
+    );
+    undo.current?.stopCapturing();
+  }
   const currentCell = data.snapshot.sheets.find(
     (sheet) => sheet.document === session.id && sheet.block === blockID,
   )?.cells[selected.current ?? ""];
@@ -279,18 +304,52 @@ export function SheetEditor({
           <Columns3 size={16} />
         </ToolButton>
         <span className="tool-divider" />
-        <ToolButton
-          label="Undo spreadsheet"
-          onClick={() => undo.current?.undo()}
-        >
-          <Undo2 size={16} />
+        <ToolButton label="Clear selected cells" onClick={clearCells}>
+          <Trash2 size={16} />
         </ToolButton>
-        <ToolButton
-          label="Redo spreadsheet"
-          onClick={() => undo.current?.redo()}
-        >
-          <Redo2 size={16} />
-        </ToolButton>
+        <BlockActions
+          fullscreen={fullscreen.active}
+          undo={{
+            label: "Undo spreadsheet",
+            run: () => {
+              undo.current?.undo();
+            },
+          }}
+          redo={{
+            label: "Redo spreadsheet",
+            run: () => {
+              undo.current?.redo();
+            },
+          }}
+          download={{
+            label: "Download spreadsheet CSV",
+            run: () => {
+              const cell = (value: unknown) =>
+                `"${String(value ?? "").replaceAll('"', '""')}"`;
+              const content = rows
+                .map((row, r) =>
+                  columns
+                    .map((column, c) => {
+                      const id = cellID(block, c, r)!;
+                      return cell(
+                        data.calculation.values[
+                          `${session.id}:${blockID}:${id}`
+                        ]?.value ??
+                          block.get("cells").get(id)?.get("input") ??
+                          "",
+                      );
+                    })
+                    .join(","),
+                )
+                .join("\r\n");
+              downloadFile(
+                "office-sheet.csv",
+                content,
+                "text/csv;charset=utf-8",
+              );
+            },
+          }}
+        />
         <ToolButton
           label="Link selected cell"
           onClick={() => setPicker(!picker)}

@@ -6,6 +6,9 @@ doc.clientID = 100;
 const note = createBlock("doc", "Getting started", "welcome-doc");
 const sketch = createBlock("canvas", "Example canvas", "welcome-canvas");
 const story = createBlock("slides", "Example slides", "welcome-slides");
+[note, sketch, story].forEach((block) =>
+  block.set("updatedAt", "2026-10-12T00:00:00.000Z"),
+);
 doc.getArray("blocks").push([note, sketch, story]);
 function paragraph(
   fragment: Y.XmlFragment,

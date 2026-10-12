@@ -18,6 +18,7 @@ import {
   sheetAxis,
   type Target,
   type Backlink,
+  trackBlockUpdates,
 } from "@office/model";
 import {
   bindFormula,
@@ -74,6 +75,7 @@ export class OfficeData {
   private attach(session: DocumentSession) {
     this.sessions.set(session.id, session);
     const api = new DocumentAPI(session.id, session.doc);
+    const timestamps = trackBlockUpdates(session.doc);
     this.APIs.set(session.id, api);
     const content = api.subscribe(() => {
       this.emit();
@@ -86,12 +88,13 @@ export class OfficeData {
     this.cleanup.set(session.id, () => {
       content();
       status();
+      timestamps();
       api.destroy();
     });
   }
   private emit = () => {
     this.revision++;
-    this.listeners.forEach((listener) => listener());
+    [...this.listeners].forEach((listener) => listener());
   };
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -165,22 +168,31 @@ export class OfficeData {
     this.emit();
   }
   targets(): Target[] {
-    return this.documents.flatMap((document) => {
-      const session = this.sessions.get(document.id);
-      return session?.hydrated
-        ? documentTargets(session.doc, document.id, document.name)
-        : [
-            {
-              document: document.id,
-              block: "_",
-              identifier: "_",
-              urn: `${document.id}:_:_`,
-              kind: "document" as const,
-              label: document.name,
-              detail: "Document",
-            },
-          ];
-    });
+    return this.documents
+      .flatMap((document) => {
+        const session = this.sessions.get(document.id);
+        return session?.hydrated
+          ? documentTargets(session.doc, document.id, document.name)
+          : [
+              {
+                document: document.id,
+                block: "_",
+                identifier: "_",
+                urn: `${document.id}:_:_`,
+                kind: "document" as const,
+                label: document.name,
+                detail: "Document",
+              },
+            ];
+      })
+      .map((target) =>
+        target.kind === "cell"
+          ? {
+              ...target,
+              value: String(this.calculation.values[target.urn]?.value ?? ""),
+            }
+          : target,
+      );
   }
   resolve(urn: string): Target | null {
     const ref = parseURN(urn);

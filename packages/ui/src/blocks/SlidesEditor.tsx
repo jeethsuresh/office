@@ -9,8 +9,6 @@ import {
   ArrowLeft,
   ArrowRight,
   X,
-  Undo2,
-  Redo2,
   Maximize2,
   Link2,
 } from "lucide-react";
@@ -26,6 +24,7 @@ import {
 import type { DocumentSession } from "@office/collaboration";
 import { useShared } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
+import { BlockActions, downloadFile } from "../shared/BlockActions";
 import { slideLayouts } from "./slideLayouts";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 import {
@@ -267,21 +266,51 @@ export function SlidesEditor({
           label="Delete slide"
           disabled={!slide}
           onClick={() => {
+            undo.current?.stopCapturing();
             if (slide)
               session.doc.transact(
                 () => slides.delete(slides.toArray().indexOf(slide), 1),
                 LOCAL_ORIGIN,
               );
+            undo.current?.stopCapturing();
           }}
         >
           <Trash2 size={16} />
         </ToolButton>
-        <ToolButton label="Undo slides" onClick={() => undo.current?.undo()}>
-          <Undo2 size={16} />
-        </ToolButton>
-        <ToolButton label="Redo slides" onClick={() => undo.current?.redo()}>
-          <Redo2 size={16} />
-        </ToolButton>
+        <BlockActions
+          fullscreen={fullscreen.active}
+          undo={{
+            label: "Undo slides",
+            run: () => {
+              undo.current?.undo();
+            },
+          }}
+          redo={{
+            label: "Redo slides",
+            run: () => {
+              undo.current?.redo();
+            },
+          }}
+          download={{
+            label: "Download slides JSON",
+            run: () =>
+              downloadFile(
+                "office-slides.json",
+                JSON.stringify(
+                  {
+                    format: "office-slides",
+                    version: 1,
+                    block: block.get("id"),
+                    title: block.get("title"),
+                    slides: orderedSlides(block).map((slide) => slide.toJSON()),
+                  },
+                  null,
+                  2,
+                ),
+                "application/json",
+              ),
+          }}
+        />
       </EditorTools>
       <div className="slides-workspace">
         <div className="slide-track" ref={track}>
@@ -448,6 +477,17 @@ function SlideCard({
             fullscreenLabel={`Fullscreen slide ${index + 1}`}
           >
             <label className="slide-layout-tool">Layout{picker}</label>
+            <ToolButton
+              label="Delete slide"
+              onClick={() =>
+                session.doc.transact(() => {
+                  const slides = block.get("slides") as Y.Array<SharedRecord>;
+                  slides.delete(slides.toArray().indexOf(slide), 1);
+                }, LOCAL_ORIGIN)
+              }
+            >
+              <Trash2 size={16} />
+            </ToolButton>
           </EditorTools>
         </div>
       )}

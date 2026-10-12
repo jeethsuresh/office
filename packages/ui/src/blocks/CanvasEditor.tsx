@@ -8,13 +8,10 @@ import {
   MoveUpRight,
   Pencil,
   Type,
-  Undo2,
-  Redo2,
   Trash2,
   ZoomIn,
   ZoomOut,
   Scan,
-  Download,
   MapPin,
   Link2,
   ExternalLink,
@@ -40,9 +37,12 @@ import {
   ReferenceChip,
   SlashPopover,
   type SlashState,
+  referenceText,
+  referenceTitle,
 } from "../shared/References";
 import { useOfficeData, useOfficeRevision } from "../shared/OfficeData";
 import type { Target } from "@office/model";
+import { BlockActions } from "../shared/BlockActions";
 type Tool = "select" | "hand" | ShapeKind;
 const palette = [
   "#3e4147",
@@ -56,10 +56,12 @@ function ShapeView({
   shape,
   selected,
   linkedLabel,
+  linkedTitle,
 }: {
   shape: Shape;
   selected: boolean;
   linkedLabel?: string;
+  linkedTitle?: string;
 }) {
   const { x, y, width: w, height: h, color, fill } = shape;
   const stroke = { stroke: color, strokeWidth: 2.5, fill };
@@ -84,6 +86,7 @@ function ShapeView({
     >
       {shape.kind === "pin" && (
         <g>
+          {linkedTitle && <title>{linkedTitle}</title>}
           <path
             d={`M${x} ${y} C${x - 8} ${y - 12},${x - 20} ${y - 24},${x - 20} ${y - 36} A20 20 0 1 1 ${x + 20} ${y - 36} C${x + 20} ${y - 24},${x + 8} ${y - 12},${x} ${y}`}
             fill={color}
@@ -92,8 +95,7 @@ function ShapeView({
           />
           <circle cx={x} cy={y - 36} r={6} fill="#fffdf8" />
           <text x={x + 30} y={y - 31} fill={color} fontSize={18}>
-            {shape.text || "Pin"}
-            {linkedLabel ? ` · ${linkedLabel}` : ""}
+            {linkedLabel || shape.text || "Pin"}
           </text>
         </g>
       )}
@@ -290,9 +292,11 @@ export function CanvasEditor({
     return { x: mapped.x, y: mapped.y };
   }
   function erase() {
+    undo.current?.stopCapturing();
     if (selected)
       shapes.doc?.transact(() => shapes.delete(selected), LOCAL_ORIGIN);
     setSelected(null);
+    undo.current?.stopCapturing();
   }
   function down(e: PointerEvent<SVGSVGElement>) {
     if (readOnly || e.button !== 0) return;
@@ -517,12 +521,23 @@ export function CanvasEditor({
             <Square size={16} fill={fill ? color : "none"} />
           </ToolButton>
           <span className="tool-divider" />
-          <ToolButton label="Undo canvas" onClick={() => undo.current?.undo()}>
-            <Undo2 size={16} />
-          </ToolButton>
-          <ToolButton label="Redo canvas" onClick={() => undo.current?.redo()}>
-            <Redo2 size={16} />
-          </ToolButton>
+          <BlockActions
+            fullscreen={fullscreen.active}
+            compact={compact}
+            undo={{
+              label: "Undo canvas",
+              run: () => {
+                undo.current?.undo();
+              },
+            }}
+            redo={{
+              label: "Redo canvas",
+              run: () => {
+                undo.current?.redo();
+              },
+            }}
+            download={{ label: "Download canvas", run: download }}
+          />
           <ToolButton
             label="Delete selected shape"
             disabled={!selected}
@@ -538,9 +553,6 @@ export function CanvasEditor({
           </ToolButton>
           <ToolButton label="Fit canvas" onClick={fit}>
             <Scan size={17} />
-          </ToolButton>
-          <ToolButton label="Download canvas" onClick={download}>
-            <Download size={17} />
           </ToolButton>
         </EditorTools>
       )}
@@ -634,8 +646,16 @@ export function CanvasEditor({
                   ? (() => {
                       const target = data.resolve(shape.link!);
                       return target
-                        ? `${target.label}${target.kind === "cell" && target.value ? ` = ${target.value}` : ""}`
+                        ? referenceText(target)
                         : "Missing reference";
+                    })()
+                  : undefined
+              }
+              linkedTitle={
+                shape.link
+                  ? (() => {
+                      const target = data.resolve(shape.link!);
+                      return target ? referenceTitle(target) : shape.link;
                     })()
                   : undefined
               }

@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 export * from "./references";
+export * from "./blockUpdates";
 export type BlockKind = "doc" | "canvas" | "slides" | "sheet";
 export type SlideLayout = "title" | "content";
 export type SharedRecord = Y.Map<any>;
@@ -111,6 +112,7 @@ export function createBlock(
   const block = createRecord({
     id,
     kind,
+    updatedAt: new Date().toISOString(),
     title:
       title ??
       {

@@ -527,20 +527,6 @@ p {
   margin-left: auto;
   text-decoration: underline;
 }
-.document-caption {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 21px 90px 4px 48px;
-  font-size: 10px;
-  color: #a3a49a;
-  flex-shrink: 0;
-}
-.document-caption span:first-child {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
 .document-view {
   position: relative;
   flex: 1;
@@ -609,6 +595,7 @@ p {
   padding: 5px 8px;
   border-radius: 5px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .block-sequence {
   font-size: 9px;
@@ -627,9 +614,31 @@ p {
   background: none;
   outline: none;
   color: #73766d;
-  width: 100%;
+  flex: 1;
+  width: auto;
   min-width: 0;
   font-weight: 450;
+}
+.block-heading-actions,
+.block-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.block-heading-actions {
+  margin-left: auto;
+}
+.block-heading-actions .tool-button {
+  width: 28px;
+  height: 30px;
+  min-height: 30px;
+}
+.block-updated {
+  color: var(--muted);
+  font-size: 9px;
+  white-space: nowrap;
+  margin: 0 7px;
 }
 .block-title:focus {
   box-shadow: 0 1px #bdbfb0;
@@ -1781,9 +1790,6 @@ p {
     padding-left: 65px;
     padding-right: 55px;
   }
-  .document-caption {
-    margin-left: 74px;
-  }
   .sidebar {
     width: 270px;
   }
@@ -1808,10 +1814,6 @@ p {
   .block-viewport {
     padding-left: 22px;
     padding-right: 20px;
-  }
-  .document-caption {
-    margin-left: 29px;
-    margin-right: 80px;
   }
   .doc-paper {
     padding: 30px 32px 20px;
@@ -1914,13 +1916,6 @@ p {
   }
   .topbar-right > .icon-button {
     width: 22px;
-  }
-  .document-caption {
-    margin: 14px 43px 4px 16px;
-    font-size: 8px;
-  }
-  .document-caption svg {
-    width: 11px;
   }
   .block-viewport {
     padding: 5px 8px 8px 10px;
@@ -2514,9 +2509,6 @@ p {
 @media (max-height: 650px) {
   .topbar {
     height: 46px;
-  }
-  .document-caption {
-    display: none;
   }
   .block-viewport {
     padding-top: 4px;
@@ -3505,7 +3497,7 @@ p {
   right: auto;
 }
 @media (max-width: 760px) {
-  .block-heading > .backlinks {
+  .block-heading .backlinks {
     display: none;
   }
   .formula-bar {
@@ -3531,5 +3523,28 @@ p {
   }
   .slide-topline-actions .icon-button {
     padding: 2px;
+  }
+}
+@media (max-width: 1100px) {
+  .block-heading {
+    flex-wrap: wrap;
+  }
+  .block-heading-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+  .block-updated {
+    margin-left: auto;
+  }
+}
+@media (max-width: 760px) {
+  .block-heading-actions .tool-button {
+    width: 25px;
+    height: 27px;
+    min-height: 27px;
+  }
+  .block-updated {
+    font-size: 8px;
+    margin-right: 0;
   }
 }

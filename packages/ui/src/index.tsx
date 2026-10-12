@@ -4,7 +4,6 @@ import {
   Check,
   ChevronRight,
   Copy,
-  FileText,
   Menu,
   MoreHorizontal,
   PanelLeft,
@@ -13,12 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { DocumentSession, type User } from "@office/collaboration";
-import {
-  WorkspaceAPI,
-  relativeTime,
-  type Workspace,
-  type DocumentMeta,
-} from "./shared/api";
+import { WorkspaceAPI, type Workspace, type DocumentMeta } from "./shared/api";
 import { useMedia, useSession } from "./shared/hooks";
 import { Modal } from "./shared/Modal";
 import { Sidebar } from "./shell/Sidebar";
@@ -348,16 +342,6 @@ export function App() {
               ? "Server unavailable. Existing content remains editable on this device."
               : error}
             <button onClick={() => void refresh()}>Retry</button>
-          </div>
-        )}
-        {route.view === "document" && (
-          <div className="document-caption">
-            <span>
-              <FileText size={13} /> Document
-            </span>
-            <span>
-              {document ? `Updated ${relativeTime(document.updatedAt)}` : ""}
-            </span>
           </div>
         )}
         {route.view === "workspace" ? (

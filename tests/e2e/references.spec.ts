@@ -82,8 +82,9 @@ test("slash links connect documents, headings, slides, pins and live cells; move
       .click();
     await pick(page, `${title} Numbers A1`);
     await page.getByRole("button", { name: "Save pin", exact: true }).click();
-    await expect(page.locator(".canvas-pin text")).toContainText(
-      "Checkpoint anchor · A1 = 42",
+    await expect(page.locator(".canvas-pin text")).toHaveText("42");
+    await expect(page.locator(".canvas-pin title")).toContainText(
+      "Numbers / A1",
     );
     const pinID = await page
       .locator(".canvas-pin")
@@ -108,9 +109,10 @@ test("slash links connect documents, headings, slides, pins and live cells; move
       await pick(page, query);
     }
     await expect(page.locator(".office-reference")).toHaveCount(4);
-    await expect(page.locator(".office-reference").last()).toContainText(
-      "A1 · 42",
-    );
+    await expect(page.locator(".office-reference").last()).toHaveText("42");
+    await expect(
+      page.locator(".office-reference").last().getByRole("button"),
+    ).toHaveAttribute("title", /Numbers \/ A1\n/);
     await page
       .getByRole("button", { name: "Fullscreen note", exact: true })
       .click();
@@ -157,9 +159,10 @@ test("slash links connect documents, headings, slides, pins and live cells; move
     ).toHaveValue("Closing anchor");
     await expect(page.getByText("All changes saved")).toBeVisible();
     await page.goto(`/#document=${sourceDoc}`);
-    await expect(page.locator(".office-reference").last()).toContainText(
-      "A2 · 70",
-    );
+    await expect(page.locator(".office-reference").last()).toHaveText("70");
+    await expect(
+      page.locator(".office-reference").last().getByRole("button"),
+    ).toHaveAttribute("title", /Renamed numbers \/ A2\n/);
     await peer.goto(
       `/#document=${targetDoc}&block=${sheetID}&target=${cellURN.split(":")[2]}`,
     );
@@ -171,9 +174,7 @@ test("slash links connect documents, headings, slides, pins and live cells; move
       "A2",
     );
     await setCell(peer, "A2", "88", "88");
-    await expect(page.locator(".office-reference").last()).toContainText(
-      "A2 · 88",
-    );
+    await expect(page.locator(".office-reference").last()).toContainText("88");
     await page
       .getByRole("button", {
         name: "Open reference: Opening anchor",
@@ -249,12 +250,12 @@ test("mobile slash picker and cell links navigate between blocks while retaining
     await note.pressSequentially("/link");
     await note.press("Enter");
     await pick(page, `${name} Values A1`);
-    await expect(page.locator(".office-reference")).toContainText("A1 · 9");
+    await expect(page.locator(".office-reference")).toContainText("9");
     await page
       .getByRole("button", { name: "Fullscreen note", exact: true })
       .tap();
     await page
-      .getByRole("button", { name: "Open reference: A1", exact: true })
+      .getByRole("button", { name: "Open reference: 9", exact: true })
       .tap();
     await expect(page.locator(".sheet-editor.editor-fullscreen")).toBeVisible();
     await expect(page.getByLabel("Cell address", { exact: true })).toHaveValue(

@@ -33,6 +33,8 @@ import { EditorFullscreenProvider } from "../shared/Fullscreen";
 import { SheetEditor } from "../blocks/SheetEditor";
 import { CopyReference, Backlinks } from "../shared/References";
 import { ReferenceNavigation } from "../shared/ReferenceNavigation";
+import { BlockActionsProvider, BlockActionsSlot } from "../shared/BlockActions";
+import { BlockUpdated } from "./BlockUpdated";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
 function Peek({
   block,
@@ -242,86 +244,97 @@ export function DocumentView({ session }: { session: DocumentSession }) {
             const kind = block.get("kind") as BlockKind;
             const Icon = icons[kind] ?? FileText;
             return (
-              <section
-                key={id}
-                data-block-id={id}
-                hidden={active !== id}
-                inert={active !== id}
-                className={`office-block block-${kind} ${active === id ? "is-active" : ""}`}
-                style={
-                  {
-                    "--block-color": BLOCK_META[kind]?.color,
-                  } as React.CSSProperties
-                }
-              >
-                <Peek
-                  block={list[index - 1]}
-                  direction="previous"
-                  onClick={() => navigate(list[index - 1].get("id"))}
-                  onAdd={() => openInsert("start")}
-                />
-                <div className="block-heading">
-                  <span className="block-type">
-                    <Icon size={15} />
-                    {BLOCK_META[kind]?.name}
-                  </span>
-                  <span className="block-sequence">
-                    {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
-                    {String(list.length).padStart(2, "0")}
-                  </span>
-                  <input
-                    className="block-title"
-                    aria-label={`${BLOCK_META[kind]?.name} block title`}
-                    value={block.get("title") ?? ""}
-                    onChange={(e) => block.set("title", e.target.value)}
+              <BlockActionsProvider key={id} onDelete={() => setDeleteID(id)}>
+                <section
+                  key={id}
+                  data-block-id={id}
+                  hidden={active !== id}
+                  inert={active !== id}
+                  className={`office-block block-${kind} ${active === id ? "is-active" : ""}`}
+                  style={
+                    {
+                      "--block-color": BLOCK_META[kind]?.color,
+                    } as React.CSSProperties
+                  }
+                >
+                  <Peek
+                    block={list[index - 1]}
+                    direction="previous"
+                    onClick={() => navigate(list[index - 1].get("id"))}
+                    onAdd={() => openInsert("start")}
                   />
-                  <CopyReference
-                    urn={`${session.id}:${id}:_`}
-                    label="Copy block reference"
+                  <div className="block-heading">
+                    <span
+                      className="block-type"
+                      title={BLOCK_META[kind]?.name}
+                      aria-label={`${BLOCK_META[kind]?.name} block`}
+                    >
+                      <Icon size={15} />
+                    </span>
+                    <span className="block-sequence">
+                      {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
+                      {String(list.length).padStart(2, "0")}
+                    </span>
+                    <input
+                      className="block-title"
+                      aria-label={`${BLOCK_META[kind]?.name} block title`}
+                      value={block.get("title") ?? ""}
+                      onChange={(e) => block.set("title", e.target.value)}
+                    />
+                    <div className="block-heading-actions">
+                      <CopyReference
+                        urn={`${session.id}:${id}:_`}
+                        label="Copy block reference"
+                      />
+                      <BlockActionsSlot />
+                      <BlockUpdated block={block} />
+                      <Backlinks urn={`${session.id}:${id}:_`} />
+                    </div>
+                  </div>
+                  <div className="block-body">
+                    {kind === "doc" ? (
+                      <DocEditor
+                        fragment={block.get("content")}
+                        session={session}
+                      />
+                    ) : kind === "canvas" ? (
+                      <CanvasEditor
+                        shapes={block.get("shapes")}
+                        scope={id}
+                        session={session}
+                      />
+                    ) : kind === "slides" ? (
+                      <SlidesEditor
+                        block={block}
+                        session={session}
+                        onActiveSlide={(slide) =>
+                          setActiveSlides((prev) =>
+                            prev[id] === slide
+                              ? prev
+                              : { ...prev, [id]: slide },
+                          )
+                        }
+                        requestedSlide={
+                          request && request.block === id
+                            ? request.slide
+                            : undefined
+                        }
+                        requestToken={request?.token}
+                      />
+                    ) : kind === "sheet" ? (
+                      <SheetEditor block={block} session={session} />
+                    ) : (
+                      <p>This block type is not registered.</p>
+                    )}
+                  </div>
+                  <Peek
+                    block={list[index + 1]}
+                    direction="next"
+                    onClick={() => navigate(list[index + 1].get("id"))}
+                    onAdd={() => openInsert("end")}
                   />
-                  <Backlinks urn={`${session.id}:${id}:_`} />
-                </div>
-                <div className="block-body">
-                  {kind === "doc" ? (
-                    <DocEditor
-                      fragment={block.get("content")}
-                      session={session}
-                    />
-                  ) : kind === "canvas" ? (
-                    <CanvasEditor
-                      shapes={block.get("shapes")}
-                      scope={id}
-                      session={session}
-                    />
-                  ) : kind === "slides" ? (
-                    <SlidesEditor
-                      block={block}
-                      session={session}
-                      onActiveSlide={(slide) =>
-                        setActiveSlides((prev) =>
-                          prev[id] === slide ? prev : { ...prev, [id]: slide },
-                        )
-                      }
-                      requestedSlide={
-                        request && request.block === id
-                          ? request.slide
-                          : undefined
-                      }
-                      requestToken={request?.token}
-                    />
-                  ) : kind === "sheet" ? (
-                    <SheetEditor block={block} session={session} />
-                  ) : (
-                    <p>This block type is not registered.</p>
-                  )}
-                </div>
-                <Peek
-                  block={list[index + 1]}
-                  direction="next"
-                  onClick={() => navigate(list[index + 1].get("id"))}
-                  onAdd={() => openInsert("end")}
-                />
-              </section>
+                </section>
+              </BlockActionsProvider>
             );
           })}
         </div>

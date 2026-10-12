@@ -397,7 +397,7 @@ test("wide minimap previews reflect content and own insertion, deletion, and und
     await expect(
       page
         .locator(".block-heading")
-        .getByRole("button", { name: /Add|Delete|Remove/i }),
+        .getByRole("button", { name: /Add|Remove/i }),
     ).toHaveCount(0);
     await map
       .getByRole("button", {

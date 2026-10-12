@@ -102,7 +102,7 @@ test("Electron runs the spreadsheet worker and opens heading/cell links within t
     ).toHaveCount(1);
     await search.press("Enter");
     await page
-      .getByRole("button", { name: "Open reference: A1", exact: true })
+      .getByRole("button", { name: "Open reference: 30", exact: true })
       .click();
     await expect(page.locator(".sheet-editor.editor-fullscreen")).toBeVisible();
     expect(

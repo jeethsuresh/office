@@ -27,6 +27,7 @@ export class DocumentSession {
   private retry: ReturnType<typeof setTimeout> | undefined;
   private retries = 0;
   private disposed = false;
+  private unloading = false;
   private pending = 0;
   private ready = false;
   constructor(
@@ -64,7 +65,9 @@ export class DocumentSession {
       this.listeners.delete(listener);
     };
   };
-  private emit = () => this.listeners.forEach((fn) => fn());
+  private emit = () => {
+    if (!this.unloading) [...this.listeners].forEach((fn) => fn());
+  };
   private setStatus(status: ConnectionStatus) {
     this.status = status;
     this.emit();
@@ -108,7 +111,15 @@ export class DocumentSession {
       this.connect();
     }
   };
-  private onUnload = () => this.awareness.setLocalState(null);
+  private onUnload = () => {
+    // Broadcast departure without updating React on the departing page.
+    this.unloading = true;
+    try {
+      this.awareness.setLocalState(null);
+    } finally {
+      this.unloading = false;
+    }
+  };
   private connect() {
     if (
       this.disposed ||

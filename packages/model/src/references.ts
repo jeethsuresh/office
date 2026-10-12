@@ -336,7 +336,7 @@ export class DocumentAPI {
       origin: transaction.origin,
       affected: [...affected],
     };
-    this.listeners.forEach((listener) => listener(change));
+    [...this.listeners].forEach((listener) => listener(change));
   };
   subscribe(listener: (change: OfficeChangeset) => void) {
     this.listeners.add(listener);

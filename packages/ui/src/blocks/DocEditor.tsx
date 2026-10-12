@@ -3,6 +3,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
 import CollaborationCaret from "@tiptap/extension-collaboration-caret";
+import { yUndoPluginKey } from "@tiptap/y-tiptap";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
   Bold,
@@ -12,10 +13,8 @@ import {
   List,
   ListOrdered,
   Quote,
-  Undo2,
-  Redo2,
   Code2,
-  Download,
+  Trash2,
   Type,
   Link2,
 } from "lucide-react";
@@ -35,6 +34,7 @@ import {
 } from "../shared/References";
 import { useOfficeData } from "../shared/OfficeData";
 import { referenceURN } from "@office/model";
+import { BlockActions } from "../shared/BlockActions";
 export function DocEditor({
   fragment,
   session,
@@ -241,19 +241,43 @@ export function DocEditor({
             <Quote size={17} />
           </ToolButton>
           <span className="tool-divider" />
+          <BlockActions
+            fullscreen={fullscreen.active}
+            compact={compact}
+            undo={{
+              label: "Undo text",
+              disabled: !editor.can().undo(),
+              run: () => editor.chain().focus().undo().run(),
+            }}
+            redo={{
+              label: "Redo text",
+              disabled: !editor.can().redo(),
+              run: () => editor.chain().focus().redo().run(),
+            }}
+            download={{ label: "Download Markdown", run: download }}
+          />
           <ToolButton
-            label="Undo text"
-            disabled={!editor.can().undo()}
-            onClick={() => editor.chain().focus().undo().run()}
+            label="Delete selected text element"
+            disabled={
+              editor.state.selection.empty && !editor.can().selectParentNode()
+            }
+            onClick={() => {
+              const history = yUndoPluginKey.getState(
+                editor.state,
+              )?.undoManager;
+              history?.stopCapturing();
+              if (editor.state.selection.empty)
+                editor
+                  .chain()
+                  .focus()
+                  .selectParentNode()
+                  .deleteSelection()
+                  .run();
+              else editor.chain().focus().deleteSelection().run();
+              history?.stopCapturing();
+            }}
           >
-            <Undo2 size={17} />
-          </ToolButton>
-          <ToolButton
-            label="Redo text"
-            disabled={!editor.can().redo()}
-            onClick={() => editor.chain().focus().redo().run()}
-          >
-            <Redo2 size={17} />
+            <Trash2 size={16} />
           </ToolButton>
           <ToolButton
             label="Markdown"
@@ -267,9 +291,6 @@ export function DocEditor({
             }
           >
             <Code2 size={18} />
-          </ToolButton>
-          <ToolButton label="Download Markdown" onClick={download}>
-            <Download size={17} />
           </ToolButton>
           <ToolButton
             label="Insert reference"
