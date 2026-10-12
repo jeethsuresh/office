@@ -1,4 +1,21 @@
 import { expect, type Page, type APIRequestContext } from "@playwright/test";
+export async function openBlockActions(page: Page) {
+  const heading = page.locator(".office-block.is-active .block-heading");
+  const overflow = heading.getByRole("button", {
+    name: "More block actions",
+    exact: true,
+  });
+  if (
+    (await overflow.isVisible()) &&
+    (await overflow.getAttribute("aria-expanded")) !== "true"
+  )
+    await overflow.click();
+  return heading;
+}
+export async function clickBlockAction(page: Page, name: string) {
+  const heading = await openBlockActions(page);
+  await heading.getByRole("button", { name, exact: true }).click();
+}
 export async function newDocument(
   page: Page,
   request: APIRequestContext,

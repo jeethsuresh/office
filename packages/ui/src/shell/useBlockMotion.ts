@@ -26,33 +26,23 @@ export function useBlockMotion(
     const editor = root.querySelector<HTMLElement>(
       ".office-block.is-active .block-editor",
     );
-    const heading = root.querySelector<HTMLElement>(
-      ".office-block.is-active .block-heading",
-    );
     function measure() {
       if (!root) return;
-      if (!editor || !heading) {
+      if (!editor) {
         root.style.setProperty("--block-step", "0px");
-        root.style.setProperty("--block-header-cover", "0px");
         return;
       }
       const style = getComputedStyle(root);
-      const headerStyle = getComputedStyle(heading);
       const gap = parseFloat(style.getPropertyValue("--block-gap"));
       root.style.setProperty(
         "--block-step",
         `${editor.getBoundingClientRect().height + gap}px`,
-      );
-      root.style.setProperty(
-        "--block-header-cover",
-        `${heading.getBoundingClientRect().height + parseFloat(headerStyle.marginTop) + parseFloat(headerStyle.marginBottom) + parseFloat(style.paddingTop)}px`,
       );
     }
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(root);
     if (editor) observer.observe(editor);
-    if (heading) observer.observe(heading);
     return () => observer.disconnect();
   }, [active, order, hydrated]);
 

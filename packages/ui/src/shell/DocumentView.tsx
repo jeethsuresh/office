@@ -30,10 +30,9 @@ import { SlidesEditor } from "../blocks/SlidesEditor";
 import { Minimap } from "./Minimap";
 import { EditorFullscreenProvider } from "../shared/Fullscreen";
 import { SheetEditor } from "../blocks/SheetEditor";
-import { CopyReference, Backlinks } from "../shared/References";
 import { ReferenceNavigation } from "../shared/ReferenceNavigation";
-import { BlockActionsProvider, BlockActionsSlot } from "../shared/BlockActions";
-import { BlockUpdated } from "./BlockUpdated";
+import { BlockActionsProvider } from "../shared/BlockActions";
+import { BlockHeader } from "./BlockHeader";
 import { useBlockMotion } from "./useBlockMotion";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
 function BlockEdgePill({
@@ -204,7 +203,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
           {list.map((block, index) => {
             const id = block.get("id");
             const kind = block.get("kind") as BlockKind;
-            const Icon = icons[kind] ?? FileText;
             return (
               <BlockActionsProvider key={id} onDelete={() => setDeleteID(id)}>
                 <section
@@ -220,39 +218,14 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     } as React.CSSProperties
                   }
                 >
-                  <div
-                    className="block-heading"
-                    hidden={active !== id}
-                    inert={active !== id}
-                  >
-                    <span
-                      className="block-type"
-                      title={BLOCK_META[kind]?.name}
-                      aria-label={`${BLOCK_META[kind]?.name} block`}
-                    >
-                      <Icon size={15} />
-                    </span>
-                    <span className="block-sequence">
-                      {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
-                      {String(list.length).padStart(2, "0")}
-                    </span>
-                    <input
-                      className="block-title"
-                      aria-label={`${BLOCK_META[kind]?.name} block title`}
-                      value={block.get("title") ?? ""}
-                      onChange={(e) => block.set("title", e.target.value)}
-                    />
-                    <div className="block-heading-actions">
-                      <CopyReference
-                        urn={`${session.id}:${id}:_`}
-                        label="Copy block reference"
-                      />
-                      <BlockActionsSlot />
-                      <BlockUpdated block={block} />
-                      <Backlinks urn={`${session.id}:${id}:_`} />
-                    </div>
-                  </div>
                   <div className="block-editor">
+                    <BlockHeader
+                      block={block}
+                      documentID={session.id}
+                      index={index}
+                      count={list.length}
+                      active={active === id}
+                    />
                     <div
                       className="block-body"
                       inert={active !== id}

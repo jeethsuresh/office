@@ -4,7 +4,13 @@ import {
   type Page,
   type APIRequestContext,
 } from "@playwright/test";
-import { newDocument, newBlock, selectCell, setCell } from "./office-fixtures";
+import {
+  newDocument,
+  newBlock,
+  selectCell,
+  setCell,
+  clickBlockAction,
+} from "./office-fixtures";
 for (const mobile of [false, true])
   test(`Glide spreadsheet calculates, moves persistent cells, undoes, and edits fullscreen on ${mobile ? "mobile" : "desktop"}`, async ({
     browser,
@@ -63,9 +69,7 @@ for (const mobile of [false, true])
       await expect(page.getByLabel("Cell value or formula")).toHaveValue(
         "=(B2*2)",
       );
-      await page
-        .getByRole("button", { name: "Undo spreadsheet", exact: true })
-        .click();
+      await clickBlockAction(page, "Undo spreadsheet");
       await selectCell(page, "C1");
       await expect(page.getByLabel("Selected cell result")).toHaveText(
         "C1: 70",

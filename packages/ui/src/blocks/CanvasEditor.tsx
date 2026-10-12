@@ -548,6 +548,13 @@ export function CanvasEditor({
           <ToolButton label="Zoom in" onClick={() => zoom(0.8)}>
             <ZoomIn size={17} />
           </ToolButton>
+          <output
+            className="canvas-zoom"
+            aria-label="Canvas zoom level"
+            aria-live="polite"
+          >
+            {Math.round((1200 / view.w) * 100)}%
+          </output>
           <ToolButton label="Zoom out" onClick={() => zoom(1.25)}>
             <ZoomOut size={17} />
           </ToolButton>
@@ -683,20 +690,6 @@ export function CanvasEditor({
             </g>
           ))}
         </svg>
-        <div className="canvas-caption">
-          <span>
-            {readOnly
-              ? ""
-              : tool === "select"
-                ? "Select & move · double-click to add a label"
-                : tool === "hand"
-                  ? "Drag to pan"
-                  : "Drag to draw"}
-          </span>
-          <span>
-            {Math.round((1200 / view.w) * 100)}% <i>·</i> {shapes.size} objects
-          </span>
-        </div>
       </div>
       {text && (
         <Modal

@@ -1,13 +1,17 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
-import { newDocument, newBlock, setCell, selectCell } from "./office-fixtures";
+import {
+  newDocument,
+  newBlock,
+  setCell,
+  selectCell,
+  openBlockActions,
+  clickBlockAction,
+} from "./office-fixtures";
 
 async function exported(page: Page, label: string) {
   const pending = page.waitForEvent("download");
-  await page
-    .locator(".office-block.is-active .block-heading")
-    .getByRole("button", { name: label, exact: true })
-    .click();
+  await clickBlockAction(page, label);
   const download = await pending;
   return {
     name: download.suggestedFilename(),
@@ -38,6 +42,7 @@ for (const mobile of [false, true]) {
         "aria-label",
         "Doc block",
       );
+      await openBlockActions(page);
       for (const name of [
         "Copy block reference",
         "Undo text",
@@ -53,6 +58,7 @@ for (const mobile of [false, true]) {
           .locator(".editor-tools")
           .getByRole("button", { name: "Undo text", exact: true }),
       ).toHaveCount(0);
+      if (mobile) await page.keyboard.press("Escape");
       await peer.goto(`/#document=${id}`);
       const note = page.getByLabel("Document text", { exact: true });
       await note.fill("Keep this");
@@ -68,13 +74,9 @@ for (const mobile of [false, true]) {
         .click();
       await expect(note).toContainText("Keep this");
       await expect(note).not.toContainText("Remove this");
-      await heading
-        .getByRole("button", { name: "Undo text", exact: true })
-        .click();
+      await clickBlockAction(page, "Undo text");
       await expect(note).toContainText("Remove this");
-      await heading
-        .getByRole("button", { name: "Redo text", exact: true })
-        .click();
+      await clickBlockAction(page, "Redo text");
       await expect(note).not.toContainText("Remove this");
       const fullHeading = "Keep this heading has several additional words";
       await note.fill(fullHeading);
@@ -136,9 +138,7 @@ for (const mobile of [false, true]) {
         .getByRole("button", { name: "Delete selected shape", exact: true })
         .click();
       await expect(block.locator("[data-shape-id]")).toHaveCount(0);
-      await heading
-        .getByRole("button", { name: "Undo canvas", exact: true })
-        .click();
+      await clickBlockAction(page, "Undo canvas");
       await expect(block.locator("[data-shape-id]")).toHaveCount(1);
       const svg = await exported(page, "Download canvas");
       expect(svg.content).toContain("<svg");
@@ -146,9 +146,7 @@ for (const mobile of [false, true]) {
       await expect(
         page.locator(`[data-block-id="${noteID}"] time`),
       ).toHaveAttribute("datetime", noteTime!);
-      await heading
-        .getByRole("button", { name: "Delete block", exact: true })
-        .click();
+      await clickBlockAction(page, "Delete block");
       await page
         .getByRole("dialog", { name: "Delete this block?" })
         .getByRole("button", { name: "Delete block", exact: true })
@@ -170,9 +168,7 @@ for (const mobile of [false, true]) {
         .getByRole("button", { name: "Clear selected cells", exact: true })
         .click();
       await expect(page.getByLabel("Selected cell result")).toHaveText("A1:");
-      await heading
-        .getByRole("button", { name: "Undo spreadsheet", exact: true })
-        .click();
+      await clickBlockAction(page, "Undo spreadsheet");
       await expect(page.getByLabel("Selected cell result")).toHaveText("A1: 7");
       const csv = await exported(page, "Download spreadsheet CSV");
       expect(csv.content.split("\r\n")[0]).toMatch(/^"7","14"/);
@@ -213,9 +209,7 @@ for (const mobile of [false, true]) {
         .getByRole("button", { name: "Delete slide", exact: true })
         .click();
       await expect(page.locator(".slide-card")).toHaveCount(0);
-      await heading
-        .getByRole("button", { name: "Undo slides", exact: true })
-        .click();
+      await clickBlockAction(page, "Undo slides");
       await expect(page.getByLabel("Slide title", { exact: true })).toHaveValue(
         "Exported title",
       );
