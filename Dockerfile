@@ -24,6 +24,7 @@ RUN bun run build:web
 
 FROM web AS frontend-test
 COPY tests/ tests/
+COPY backend/internal/store/welcome.bin backend/internal/store/welcome.bin
 COPY scripts/ scripts/
 COPY apps/desktop/ apps/desktop/
 RUN bun run typecheck && bun test
