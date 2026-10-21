@@ -7,6 +7,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"office/backend/internal/gravitas"
 	"office/backend/internal/server"
 	"office/backend/internal/store"
 	"os"
@@ -26,6 +27,16 @@ func main() {
 		log.Fatal(e)
 	}
 	svc := server.New(s, *web, *origin)
+	issuer := os.Getenv("GRAVITAS_ISSUER")
+	if os.Getenv("GRAVITAS_REQUIRED") == "true" && issuer == "" {
+		log.Fatal("GRAVITAS_ISSUER is required")
+	}
+	if issuer != "" {
+		svc.Federation, e = gravitas.New(issuer, os.Getenv("GRAVITAS_APP_URL"), os.Getenv("GRAVITAS_SESSION_KEY"))
+		if e != nil {
+			log.Fatal(e)
+		}
+	}
 	ln, e := net.Listen("tcp", *listen)
 	if e != nil {
 		log.Fatal(e)

@@ -16,12 +16,15 @@ export class WorkspaceAPI {
   async request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
     const res = await fetch(new URL("/api" + path, this.baseURL), {
       method,
-      headers: body ? { "Content-Type": "application/json" } : {},
+      headers: { ...(body ? { "Content-Type": "application/json" } : {}), ...(method !== "GET" ? { "X-Gravitas-CSRF": "1" } : {}) },
+      credentials: "same-origin",
       body: body ? JSON.stringify(body) : undefined,
     });
     const value = await res.json();
-    if (!res.ok)
+    if (!res.ok) {
+      if (res.status === 401) window.dispatchEvent(new Event("office:unauthorized"));
       throw new Error(value.error ?? "The workspace could not be reached");
+    }
     return value;
   }
   list() {

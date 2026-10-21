@@ -89,7 +89,7 @@
                 },
                 "startupProbe": {
                   "httpGet": {
-                    "path": "/api/health",
+                    "path": "/api/readyz",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,
@@ -98,7 +98,7 @@
                 },
                 "readinessProbe": {
                   "httpGet": {
-                    "path": "/api/health",
+                    "path": "/api/readyz",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,
@@ -131,6 +131,29 @@
                   "/data",
                   "-web",
                   "/app/web"
+                ],
+                "env": [
+                  {
+                    "name": "GRAVITAS_REQUIRED",
+                    "value": "true"
+                  },
+                  {
+                    "name": "GRAVITAS_ISSUER",
+                    "value": "https://gravitas.cool"
+                  },
+                  {
+                    "name": "GRAVITAS_APP_URL",
+                    "value": "https://work.gravitas.cool"
+                  },
+                  {
+                    "name": "GRAVITAS_SESSION_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "office-runtime",
+                        "key": "GRAVITAS_SESSION_KEY"
+                      }
+                    }
+                  }
                 ]
               }
             ],
@@ -236,6 +259,43 @@
                 "port": 53
               }
             ]
+          },
+          {
+            "to": [
+              {
+                "ipBlock": {
+                  "cidr": "209.38.8.79/32"
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 443
+              }
+            ]
+          },
+          {
+            "to": [
+              {
+                "namespaceSelector": {
+                  "matchLabels": {
+                    "kubernetes.io/metadata.name": "traefik"
+                  }
+                },
+                "podSelector": {
+                  "matchLabels": {
+                    "app.kubernetes.io/name": "traefik"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 8443
+              }
+            ]
           }
         ]
       }
@@ -248,8 +308,7 @@
         "namespace": "office",
         "annotations": {
           "traefik.ingress.kubernetes.io/router.entrypoints": "websecure",
-          "traefik.ingress.kubernetes.io/router.tls": "true",
-          "traefik.ingress.kubernetes.io/router.middlewares": "office-office-auth@kubernetescrd"
+          "traefik.ingress.kubernetes.io/router.tls": "true"
         }
       },
       "spec": {
@@ -282,21 +341,6 @@
             }
           }
         ]
-      }
-    },
-    {
-      "apiVersion": "traefik.io/v1alpha1",
-      "kind": "Middleware",
-      "metadata": {
-        "name": "office-auth",
-        "namespace": "office"
-      },
-      "spec": {
-        "basicAuth": {
-          "secret": "office-auth",
-          "removeHeader": true,
-          "realm": "Office"
-        }
       }
     }
   ]

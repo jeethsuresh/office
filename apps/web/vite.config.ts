@@ -24,10 +24,10 @@ export default defineConfig({
         this.emitFile({
           type: "asset",
           fileName: "sw.js",
-          source: `const CACHE='office-static-${version}';const ASSETS=${JSON.stringify(assets)};
+          source: `const CACHE='office-static-${version}';const LOCAL=['localhost','127.0.0.1','[::1]'].includes(location.hostname);const ASSETS=${JSON.stringify(assets)};
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('office-static-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
-self.addEventListener('fetch',event=>{const request=event.request,url=new URL(request.url);if(request.method!=='GET'||url.origin!==location.origin||url.pathname.startsWith('/api/')&&url.pathname!=='/api/workspace')return;
+self.addEventListener('fetch',event=>{const request=event.request,url=new URL(request.url);if(request.method!=='GET'||url.origin!==location.origin||(url.pathname.startsWith('/api/')&&(!LOCAL||url.pathname!=='/api/workspace'))||url.pathname.startsWith('/auth/'))return;
 event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));}return response;}).catch(async()=>{const saved=await caches.match(request);if(saved)return saved;if(request.mode==='navigate')return caches.match('/index.html');throw new Error('Unavailable offline');}));});`,
         });
       },
@@ -37,7 +37,7 @@ event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=resp
     host: "127.0.0.1",
     port: 5174,
     strictPort: true,
-    proxy: { "/api": { target: "http://127.0.0.1:4317", ws: true } },
+    proxy: { "/api": { target: "http://127.0.0.1:4317", ws: true }, "/auth": { target: "http://127.0.0.1:4317" } },
   },
   build: { outDir: "dist", emptyOutDir: true },
 });
