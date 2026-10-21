@@ -9,6 +9,9 @@ python3 render.py "$1" | python3 -c 'import json,sys; x=json.load(sys.stdin); x[
 kubectl -n office rollout status deployment/office --timeout=300s
 # /api/readyz exists only in the IAM-enabled server; older images remain unready.
 python3 render.py "$1" | kubectl apply --server-side --field-manager=gravitas-deploy -f -
+# Traefik applies the ingress annotation change asynchronously. Wait for its
+# public IAM readiness route before checking the protected workspace response.
+curl --fail --silent --show-error --retry 15 --retry-all-errors --retry-delay 2 \
+  --max-time 10 --retry-max-time 60 https://work.gravitas.cool/api/readyz
 status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' https://work.gravitas.cool/api/workspace)"
 [[ "$status" == '401' ]] || { echo "Expected authentication requirement, got $status" >&2; exit 1; }
-curl --fail --silent --show-error https://work.gravitas.cool/api/readyz
