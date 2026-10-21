@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"office/backend/internal/gravitas"
 	"office/backend/internal/store"
 	"os"
 	"path/filepath"
@@ -29,6 +30,7 @@ type Server struct {
 	Store         *store.Store
 	WebDir        string
 	AllowedOrigin string
+	Federation    *gravitas.Client
 	mu            sync.Mutex
 	rooms         map[string]*room
 }
@@ -85,6 +87,13 @@ func (s *Server) originOK(r *http.Request) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
+	mux.HandleFunc("GET /api/readyz", func(w http.ResponseWriter, r *http.Request) {
+		if s.Federation == nil {
+			respond(w, 503, map[string]bool{"ok": false})
+			return
+		}
+		respond(w, 200, map[string]string{"status": "ok", "auth": "gravitas"})
+	})
 	mux.HandleFunc("GET /api/workspace", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, s.Store.List()) })
 	mux.HandleFunc("POST /api/folders", s.addFolder)
 	mux.HandleFunc("PATCH /api/folders/{id}", s.updateFolder)
@@ -95,7 +104,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/documents/{id}/ws", s.websocket)
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) { fail(w, 404, errors.New("endpoint not found")) })
 	mux.HandleFunc("/", s.static)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return s.federated(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "same-origin")
 		if !s.originOK(r) {
@@ -104,7 +113,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		if r.Header.Get("Origin") == s.AllowedOrigin && s.AllowedOrigin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", s.AllowedOrigin)
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Gravitas-CSRF")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
 			w.Header().Set("Vary", "Origin")
 		}
@@ -113,7 +122,7 @@ func (s *Server) Handler() http.Handler {
 			return
 		}
 		mux.ServeHTTP(w, r)
-	})
+	}))
 }
 func respond(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
@@ -295,6 +304,10 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := &client{conn: conn, send: make(chan []byte, 256), done: make(chan struct{})}
+	if deadline, ok := r.Context().Deadline(); ok {
+		timer := time.AfterFunc(time.Until(deadline), c.close)
+		defer timer.Stop()
+	}
 	go func() {
 		ticker := time.NewTicker(20 * time.Second)
 		defer ticker.Stop()
