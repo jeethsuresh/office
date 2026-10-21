@@ -13,7 +13,7 @@
     "dev:web": "bun scripts/dev.ts web",
     "backend:build": "bun scripts/build.ts backend",
     "build": "bun scripts/build.ts",
-    "build:web": "bun --cwd apps/web run build",
+    "build:web": "bun run --cwd apps/web build",
     "start:web": "bun scripts/serve.ts",
     "desktop": "bun scripts/desktop.ts",
     "package": "bun scripts/package.ts",

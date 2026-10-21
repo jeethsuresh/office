@@ -1,0 +1,16 @@
+.git
+.github
+.agents
+.codex
+**/node_modules
+**/dist
+**/dist-electron
+**/release
+apps/desktop/resources
+.office-data
+.cache
+.env
+.env.*
+*.log
+test-results
+playwright-report
