@@ -1,14 +1,17 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"github.com/gorilla/websocket"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"office/backend/internal/gravitas"
 	"office/backend/internal/store"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestFederatedGuardCoversAPIAndWebSocket(t *testing.T) {
@@ -92,5 +95,40 @@ func TestFederationReadinessFailsClosedInLocalMode(t *testing.T) {
 	svc.Handler().ServeHTTP(w, httptest.NewRequest("GET", "/api/readyz", nil))
 	if w.Code != 503 {
 		t.Fatal("non-federated server passed hosted readiness")
+	}
+}
+
+func TestWebSocketClosesAtAuthenticationDeadline(t *testing.T) {
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := New(st, "", "")
+	defer svc.Close()
+	doc, err := st.AddDocument("Expiry test", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	hs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Second)
+		defer cancel()
+		svc.Handler().ServeHTTP(w, r.WithContext(ctx))
+	}))
+	defer hs.Close()
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(hs.URL, "http")+"/api/documents/"+doc.ID+"/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	if _, _, err = conn.ReadMessage(); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_, _, err = conn.ReadMessage()
+	if err == nil {
+		t.Fatal("socket stayed open past session deadline")
+	}
+	if timeout, ok := err.(net.Error); ok && timeout.Timeout() {
+		t.Fatal("server failed to enforce the authentication deadline")
 	}
 }

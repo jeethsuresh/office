@@ -25,6 +25,13 @@ export function FederatedApp() {
     window.addEventListener("office:unauthorized", expired);
     return () => window.removeEventListener("office:unauthorized", expired);
   }, []);
+  useEffect(() => {
+    if (!user) return;
+    const recheck = () => { void fetch("/auth/gravitas/session", { credentials: "same-origin", cache: "no-store" }).then(response => { if (response.status === 401) setUser(null); }).catch(() => {}); };
+    const timer = setInterval(recheck, 60_000);
+    window.addEventListener("focus", recheck);
+    return () => { clearInterval(timer); window.removeEventListener("focus", recheck); };
+  }, [user?.user_id]);
   if (local) return <App />;
   if (checking) return <main className="office-auth"><p>Checking your session…</p></main>;
   if (!user) {

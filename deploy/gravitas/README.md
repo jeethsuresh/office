@@ -49,7 +49,7 @@ from `office-runtime` select hosted authentication. The 32-byte base64url key
 persists across deployments and encrypts host-only Secure/HttpOnly transaction
 and eight-hour session cookies. Tokens are exchanged server-side and discarded
 after fetching the stable identity; IAM cookies and passwords stay at IAM.
-State/PKCE, issuer pinning, CSRF checks and authenticated WebSocket handshakes are
+State/PKCE, issuer pinning, CSRF checks and authenticated WebSocket handshakes and closure at session expiry are
 verified in tests. Local app logout leaves IAM signed in; an app session has its
 own lifetime, independent of IAM logout/grant revocation.
 

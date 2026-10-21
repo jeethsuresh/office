@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -64,10 +65,14 @@ func (s *Server) federated(next http.Handler) http.Handler {
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if s.Federation != nil && strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/health" && r.URL.Path != "/api/readyz" {
 			w.Header().Set("Cache-Control", "no-store")
-			if _, err := s.Federation.Session(r); err != nil {
+			_, expires, err := s.Federation.SessionInfo(r)
+			if err != nil {
 				fail(w, 401, errors.New("Sign in with Gravitas"))
 				return
 			}
+			ctx, cancel := context.WithDeadline(r.Context(), expires)
+			defer cancel()
+			r = r.WithContext(ctx)
 			if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !s.Federation.ValidMutation(r) {
 				fail(w, 403, errors.New("request verification required"))
 				return

@@ -113,7 +113,7 @@ func (s *Server) Handler() http.Handler {
 		}
 		if r.Header.Get("Origin") == s.AllowedOrigin && s.AllowedOrigin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", s.AllowedOrigin)
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-Gravitas-CSRF")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS")
 			w.Header().Set("Vary", "Origin")
 		}
@@ -304,6 +304,10 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := &client{conn: conn, send: make(chan []byte, 256), done: make(chan struct{})}
+	if deadline, ok := r.Context().Deadline(); ok {
+		timer := time.AfterFunc(time.Until(deadline), c.close)
+		defer timer.Stop()
+	}
 	go func() {
 		ticker := time.NewTicker(20 * time.Second)
 		defer ticker.Stop()
