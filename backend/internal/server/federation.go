@@ -9,6 +9,28 @@ import (
 	"strings"
 )
 
+type federatedSessionKey struct{}
+
+func (s *Server) federationError(w http.ResponseWriter, err error) {
+	if errors.Is(err, gravitas.ErrUnavailable) {
+		fail(w, 503, gravitas.ErrUnavailable)
+		return
+	}
+	s.Federation.ClearSession(w)
+	fail(w, 401, errors.New("Sign in with Gravitas"))
+}
+
+func (s *Server) validateLiveSession(ctx context.Context) error {
+	if s.Federation == nil {
+		return nil
+	}
+	bound, ok := ctx.Value(federatedSessionKey{}).(gravitas.AppSession)
+	if !ok {
+		return gravitas.ErrLoginRequired
+	}
+	return s.Federation.Revalidate(ctx, bound)
+}
+
 // The hosted app uses IAM; the local desktop server keeps its loopback mode.
 func (s *Server) federated(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
@@ -52,7 +74,7 @@ func (s *Server) federated(next http.Handler) http.Handler {
 			w.Header().Set("Cache-Control", "no-store")
 			identity, err := c.Session(r)
 			if err != nil {
-				fail(w, 401, errors.New("Sign in with Gravitas"))
+				s.federationError(w, err)
 				return
 			}
 			respond(w, 200, map[string]any{"user": identity})
@@ -67,15 +89,16 @@ func (s *Server) federated(next http.Handler) http.Handler {
 		})
 	}
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.Federation != nil && strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/health" && r.URL.Path != "/api/readyz" {
+		if s.Federation != nil && strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/health" && r.URL.Path != "/api/readyz" && r.URL.Path != "/api/session-readyz" {
 			w.Header().Set("Cache-Control", "no-store")
-			_, expires, err := s.Federation.SessionInfo(r)
+			bound, err := s.Federation.AppSession(r, gravitas.SessionCookie)
 			if err != nil {
-				fail(w, 401, errors.New("Sign in with Gravitas"))
+				s.federationError(w, err)
 				return
 			}
-			ctx, cancel := context.WithDeadline(r.Context(), expires)
+			ctx, cancel := context.WithDeadline(r.Context(), bound.ExpiresAt)
 			defer cancel()
+			ctx = context.WithValue(ctx, federatedSessionKey{}, bound)
 			r = r.WithContext(ctx)
 			if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !s.Federation.ValidMutation(r) {
 				fail(w, 403, errors.New("request verification required"))

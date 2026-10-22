@@ -89,7 +89,7 @@
                 },
                 "startupProbe": {
                   "httpGet": {
-                    "path": "/api/readyz",
+                    "path": "/api/session-readyz",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,
@@ -98,7 +98,7 @@
                 },
                 "readinessProbe": {
                   "httpGet": {
-                    "path": "/api/readyz",
+                    "path": "/api/session-readyz",
                     "port": "http"
                   },
                   "timeoutSeconds": 3,

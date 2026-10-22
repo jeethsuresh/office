@@ -14,6 +14,8 @@ const UPDATE = 0,
   READY = 2,
   ACK = 3,
   AWARENESS_REQUEST = 4;
+const pendingLocalDocuments = new Map<string, Set<Y.Doc>>();
+
 export class DocumentSession {
   readonly doc = new Y.Doc();
   readonly awareness = new Awareness(this.doc);
@@ -30,6 +32,7 @@ export class DocumentSession {
   private unloading = false;
   private pending = 0;
   private ready = false;
+  private storageKey: string;
   constructor(
     readonly id: string,
     readonly baseURL: string,
@@ -37,10 +40,9 @@ export class DocumentSession {
     namespace = baseURL,
     observeOnly = false,
   ) {
-    this.persistence = new IndexeddbPersistence(
-      `office:${namespace}:${id}`,
-      this.doc,
-    );
+    this.storageKey = `office:${namespace}:${id}`;
+    for (const pending of pendingLocalDocuments.get(this.storageKey) ?? []) Y.applyUpdate(this.doc, Y.encodeStateAsUpdate(pending));
+    this.persistence = new IndexeddbPersistence(this.storageKey, this.doc);
     if (observeOnly) this.awareness.setLocalState(null);
     else this.awareness.setLocalStateField("user", user);
     this.doc.on("update", this.onUpdate);
@@ -193,7 +195,7 @@ export class DocumentSession {
     socket.onerror = () => {
       this.error = "Cannot reach this workspace server";
     };
-    socket.onclose = () => {
+    socket.onclose = (event) => {
       if (this.disposed) return;
       this.ready = false;
       removeAwarenessStates(
@@ -205,6 +207,10 @@ export class DocumentSession {
       );
       this.hydrated = true;
       this.setStatus("offline");
+      if (event.code === 4401) {
+        window.dispatchEvent(new Event("office:unauthorized"));
+        return;
+      }
       this.retry = setTimeout(
         () => this.connect(),
         Math.min(1000 * 2 ** this.retries++, 15000),
@@ -228,9 +234,25 @@ export class DocumentSession {
     this.awareness.off("update", this.onAwareness);
     this.awareness.off("change", this.emit);
     this.awareness.destroy();
-    void this.persistence.destroy();
-    this.doc.destroy();
+    void closePersistedDocument(this.doc, this.persistence, this.storageKey);
     this.remoteState.destroy();
     this.listeners.clear();
+  }
+}
+
+// IndexedDB records the full initial snapshot before whenSynced resolves. A
+// fast logout must let that snapshot commit before unsubscribing persistence.
+export async function closePersistedDocument(doc: Y.Doc, persistence: { whenSynced: Promise<unknown>; destroy(): Promise<unknown> }, key = "") {
+  let pending = pendingLocalDocuments.get(key);
+  if (!pending) pendingLocalDocuments.set(key, pending = new Set());
+  pending.add(doc);
+  try {
+    await persistence.whenSynced;
+    await persistence.destroy();
+    doc.destroy();
+    pending.delete(doc);
+    if (!pending.size) pendingLocalDocuments.delete(key);
+  } catch {
+    // Keep the document alive when storage fails; never discard its pending edits.
   }
 }

@@ -27,12 +27,13 @@ const (
 )
 
 type Server struct {
-	Store         *store.Store
-	WebDir        string
-	AllowedOrigin string
-	Federation    *gravitas.Client
-	mu            sync.Mutex
-	rooms         map[string]*room
+	Store               *store.Store
+	WebDir              string
+	AllowedOrigin       string
+	Federation          *gravitas.Client
+	authRecheckInterval time.Duration
+	mu                  sync.Mutex
+	rooms               map[string]*room
 }
 type room struct {
 	mu      sync.Mutex
@@ -48,6 +49,17 @@ type client struct {
 }
 
 func (c *client) close() { c.once.Do(func() { close(c.done); _ = c.conn.Close() }) }
+func (c *client) closeForSession(err error) {
+	code, message := 4401, "Sign in required"
+	if errors.Is(err, gravitas.ErrUnavailable) {
+		code, message = 4503, "Sign-in temporarily unavailable"
+	}
+	c.once.Do(func() {
+		close(c.done)
+		_ = c.conn.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(code, message), time.Now().Add(time.Second))
+		_ = c.conn.Close()
+	})
+}
 func (c *client) enqueue(frame []byte) bool {
 	select {
 	case <-c.done:
@@ -74,7 +86,7 @@ func (c *client) enqueueReplay(frame []byte) bool {
 }
 
 func New(s *store.Store, web, origin string) *Server {
-	return &Server{Store: s, WebDir: web, AllowedOrigin: origin, rooms: map[string]*room{}}
+	return &Server{Store: s, WebDir: web, AllowedOrigin: origin, rooms: map[string]*room{}, authRecheckInterval: gravitas.RecheckInterval}
 }
 func (s *Server) originOK(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
@@ -87,13 +99,15 @@ func (s *Server) originOK(r *http.Request) bool {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
-	mux.HandleFunc("GET /api/readyz", func(w http.ResponseWriter, r *http.Request) {
+	sessionReady := func(w http.ResponseWriter, r *http.Request) {
 		if s.Federation == nil {
 			respond(w, 503, map[string]bool{"ok": false})
 			return
 		}
 		respond(w, 200, map[string]string{"status": "ok", "auth": "gravitas"})
-	})
+	}
+	mux.HandleFunc("GET /api/readyz", sessionReady)
+	mux.HandleFunc("GET /api/session-readyz", sessionReady)
 	mux.HandleFunc("GET /api/workspace", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, s.Store.List()) })
 	mux.HandleFunc("POST /api/folders", s.addFolder)
 	mux.HandleFunc("PATCH /api/folders/{id}", s.updateFolder)
@@ -305,8 +319,25 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 	}
 	c := &client{conn: conn, send: make(chan []byte, 256), done: make(chan struct{})}
 	if deadline, ok := r.Context().Deadline(); ok {
-		timer := time.AfterFunc(time.Until(deadline), c.close)
+		timer := time.AfterFunc(time.Until(deadline), func() { c.closeForSession(gravitas.ErrLoginRequired) })
 		defer timer.Stop()
+	}
+	if s.Federation != nil {
+		go func() {
+			ticker := time.NewTicker(s.authRecheckInterval)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-c.done:
+					return
+				case <-ticker.C:
+					if err := s.validateLiveSession(r.Context()); err != nil {
+						c.closeForSession(err)
+						return
+					}
+				}
+			}
+		}()
 	}
 	go func() {
 		ticker := time.NewTicker(20 * time.Second)
@@ -364,6 +395,12 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 		}
 		if b[0] != Update && b[0] != Awareness {
 			continue
+		}
+		// A socket established before central logout must not append a later
+		// mutation, even before its periodic status check notices revocation.
+		if err := s.validateLiveSession(r.Context()); err != nil {
+			c.closeForSession(err)
+			return
 		}
 		room.mu.Lock()
 		if b[0] == Update {
