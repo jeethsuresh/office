@@ -2,12 +2,10 @@ package server
 
 import (
 	"context"
-	"encoding/base64"
 	"github.com/gorilla/websocket"
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"office/backend/internal/gravitas"
 	"office/backend/internal/store"
 	"strings"
 	"testing"
@@ -21,10 +19,7 @@ func TestFederatedGuardCoversAPIAndWebSocket(t *testing.T) {
 	}
 	svc := New(st, "", "")
 	defer svc.Close()
-	c, err := gravitas.New("https://gravitas.cool", "https://work.gravitas.cool", base64.RawURLEncoding.EncodeToString(make([]byte, 32)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	c, identity, _ := officeBoundFixture(t)
 	svc.Federation = c
 	handler := svc.Handler()
 	for _, path := range []string{"/api/workspace", "/api/documents/unknown/ws"} {
@@ -34,7 +29,6 @@ func TestFederatedGuardCoversAPIAndWebSocket(t *testing.T) {
 			t.Fatalf("%s bypassed auth: %d", path, w.Code)
 		}
 	}
-	identity := gravitas.Identity{Issuer: c.Issuer, Subject: "subject", Username: "reader", Domain: "gravitas.cool", UserID: "@reader:gravitas.cool"}
 	saved := httptest.NewRecorder()
 	if err = c.SetSession(saved, identity); err != nil {
 		t.Fatal(err)
