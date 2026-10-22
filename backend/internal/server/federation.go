@@ -14,7 +14,7 @@ func (s *Server) federated(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /auth/gravitas/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		respond(w, 200, map[string]bool{"enabled": s.Federation != nil})
+		respond(w, 200, map[string]bool{"enabled": s.Federation != nil, "autoSignIn": s.Federation != nil && gravitas.HasSharedSignInHint(r)})
 	})
 	if s.Federation != nil {
 		c := s.Federation
@@ -31,8 +31,12 @@ func (s *Server) federated(next http.Handler) http.Handler {
 		mux.HandleFunc("GET /auth/gravitas/callback", func(w http.ResponseWriter, r *http.Request) {
 			identity, back, err := c.Callback(w, r)
 			if err != nil {
-				if errors.Is(err, gravitas.ErrLoginRequired) || errors.Is(err, gravitas.ErrConsentRequired) {
-					http.Redirect(w, r, "/login?next="+url.QueryEscape(gravitas.SafeNext(back)), http.StatusSeeOther)
+				if errors.Is(err, gravitas.ErrLoginRequired) {
+					http.Redirect(w, r, "/login?auto=off&next="+url.QueryEscape(gravitas.SafeNext(back)), http.StatusSeeOther)
+					return
+				}
+				if errors.Is(err, gravitas.ErrConsentRequired) {
+					http.Redirect(w, r, "/auth/gravitas/start?next="+url.QueryEscape(gravitas.SafeNext(back)), http.StatusSeeOther)
 					return
 				}
 				fail(w, 400, errors.New("Sign-in could not be completed; start again from the Office login page"))

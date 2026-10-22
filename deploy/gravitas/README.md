@@ -44,6 +44,16 @@ requirements. The public login shell and static assets contain no workspace data
 Office remains a shared collaborative workspace for approved IAM users; this
 change does not create separate per-user workspaces.
 
+On startup, `autoSignIn` in the public auth config reflects only IAM's shared
+`__Secure-gravitas_signed_in=1` navigation hint. IAM manages that Secure/HttpOnly,
+Domain=gravitas.cool, Path=/, SameSite=Lax cookie with the remaining lifetime of
+its refresh family (at most 30 days). With no local app session, Office attempts
+`prompt=none` once. Validated `consent_required` restarts with interactive consent;
+`login_required` and app logout use `auto=off` to stop automatic retries. Safe
+document/folder fragments survive the round trip. The marker never authorizes
+workspace access. Refresh credentials remain host-only at IAM and are not shared
+with Office; existing app sessions retain their own eight-hour lifetime.
+
 `GRAVITAS_REQUIRED=true`, the pinned HTTPS issuer/app URL, and `GRAVITAS_SESSION_KEY`
 from `office-runtime` select hosted authentication. The 32-byte base64url key
 persists across deployments and encrypts host-only Secure/HttpOnly transaction
