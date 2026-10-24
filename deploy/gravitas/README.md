@@ -17,8 +17,7 @@ native IAM authentication passes its live checks.
 
 The `Gravitas` GitHub workflow runs Go and frontend tests, publishes an immutable
 AMD64 GHCR image, and deploys from `main` using the namespace-scoped
-`gravitas` environment credential. Set repository variable
-`GRAVITAS_DEPLOY_ENABLED=true` after bootstrap. `bootstrap.json` requires an
+`gravitas` environment credential after bootstrap. Successful pushes to `main` deploy automatically after tests pass. `bootstrap.json` requires an
 administrator; app CI cannot modify RBAC, Secrets or shared ingress resources.
 
 `deploy.sh` checks the target cluster, renders only a digest-pinned image, waits
