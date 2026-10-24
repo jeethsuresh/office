@@ -4,11 +4,12 @@ import { appReturnPath, automaticSignInURL } from "./automaticSignIn";
 import { createSessionMonitor } from "./sessionMonitor";
 import "./auth.css";
 
-type User = { sub: string; user_id: string; username: string };
+type User = { issuer: string; sub: string; user_id: string; username: string };
 export function FederatedApp() {
   const [user, setUser] = useState<User | null>(null);
   const [local, setLocal] = useState(false);
   const [checking, setChecking] = useState(true);
+  const [defaultDomain, setDefaultDomain] = useState("");
   const [error, setError] = useState("");
   const [autoSignIn, setAutoSignIn] = useState(false);
   const automaticAttempted = useRef(false);
@@ -19,9 +20,10 @@ export function FederatedApp() {
     let cancelled = false, initialized = false;
     void fetch("/auth/gravitas/config", { cache: "no-store" }).then(async response => {
       if (!response.ok) throw new Error("Unable to check sign-in");
-      const config = await response.json() as { enabled: boolean; autoSignIn?: boolean };
+      const config = await response.json() as { enabled: boolean; autoSignIn?: boolean; defaultDomain: string };
       if (cancelled) return;
       if (!config.enabled) { sessionStorage.setItem("office-auth-mode", "local"); setLocal(true); return; }
+      setDefaultDomain(config.defaultDomain);
       federatedRef.current = true;
       sessionStorage.removeItem("office-auth-mode");
       const session = await fetch("/auth/gravitas/session", { credentials: "same-origin", cache: "no-store" });
@@ -68,8 +70,14 @@ export function FederatedApp() {
       <span className="office-auth-kicker">GRAVITAS · OFFICE</span><h1>A place to work together.</h1>
       <p>Sign in with your Gravitas account to open the shared workspace.</p>
       {error && <p role="alert">{error}</p>}
-      <a className="office-auth-primary" href={"/auth/gravitas/start?" + query}>Sign in with Gravitas</a>
-      <a href={"/auth/gravitas/register?" + query}>Register at gravitas.cool</a>
+      <form className="gravitas-login" action="/auth/gravitas/start" method="get">
+        <input type="hidden" name="next" value={next} />
+        <label htmlFor="gravitas-username">Username</label>
+        <div className="gravitas-login-row"><input id="gravitas-username" name="username" autoComplete="username" autoCapitalize="none" spellCheck={false} placeholder={`username@${defaultDomain}`} maxLength={256} required />
+        <button type="submit" aria-label="Sign in" title="Sign in">🔥</button></div>
+        <small>Without a domain, sign in at {defaultDomain}.</small>
+      </form>
+      <a href={"/auth/gravitas/register?" + query}>Register at {defaultDomain}</a>
     </section></main>;
   }
   const logout = async () => {
@@ -81,5 +89,5 @@ export function FederatedApp() {
       userRef.current = null; setUser(null);
     } catch { setError("Sign-out failed. Please try again."); }
   };
-  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.user_id}</span><span>{error}</span><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={user.sub} /></div></div>;
+  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.user_id}</span><span>{error}</span><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={`${user.issuer}|${user.sub}`} /></div></div>;
 }
