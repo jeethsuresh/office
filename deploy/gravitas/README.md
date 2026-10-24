@@ -110,3 +110,5 @@ action checks namespace permissions, exact image digest, readiness and HTTPS,
 and removes its temporary kubeconfig on failure or success. Build/test jobs are
 unchanged. Review a new tooling pin before updating it. New-app onboarding is
 documented in the private tooling repository.
+
+Federated username login permits public HTTPS on port 443. Private, loopback, link-local, metadata and reserved destinations are excluded by NetworkPolicy and the pinned-IP federation client.
