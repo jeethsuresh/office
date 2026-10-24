@@ -111,3 +111,13 @@ The acceptance checks cover two real browser clients, offline text convergence, 
 - `scripts`: development, build, packaging, and test orchestration.
 
 See [PLAN.md](PLAN.md) for the maintained checklist, [architecture](docs/architecture.md) for boundaries and extension points, and [collaboration](docs/collaboration.md) for the wire protocol and guarantees, and [verification](docs/verification.md) for the tested results and limits.
+
+### Username sign-in
+
+Sign in by entering your username and pressing **🔥** (or Enter). A bare name
+such as `alice` uses the identity server configured by `GRAVITAS_ISSUER`, which
+also owns the registration button. The Gravitas deployment uses `gravitas.cool`.
+`alice@example.org`, `alice:example.org` and `@alice:example.org` select that
+public domain's compatible IAM service over HTTPS. Registration always stays on
+the configured default server. Login transactions and app sessions retain the
+selected issuer, including subsequent session-revocation checks.

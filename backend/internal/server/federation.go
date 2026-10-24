@@ -36,17 +36,25 @@ func (s *Server) federated(next http.Handler) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /auth/gravitas/config", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		respond(w, 200, map[string]bool{"enabled": s.Federation != nil, "autoSignIn": s.Federation != nil && gravitas.HasSharedSignInHint(r)})
+		respond(w, 200, map[string]any{"enabled": s.Federation != nil, "autoSignIn": s.Federation != nil && gravitas.HasSharedSignInHint(r), "defaultDomain": defaultDomain(s.Federation)})
 	})
 	if s.Federation != nil {
 		c := s.Federation
 		mux.HandleFunc("GET /auth/gravitas/start", func(w http.ResponseWriter, r *http.Request) {
 			if err := c.Start(w, r, false); err != nil {
+				if errors.Is(err, gravitas.ErrInvalidUsername) {
+					fail(w, 400, err)
+					return
+				}
 				fail(w, 503, errors.New("Gravitas sign-in is temporarily unavailable; please try again"))
 			}
 		})
 		mux.HandleFunc("GET /auth/gravitas/register", func(w http.ResponseWriter, r *http.Request) {
 			if err := c.Start(w, r, true); err != nil {
+				if errors.Is(err, gravitas.ErrInvalidUsername) {
+					fail(w, 400, err)
+					return
+				}
 				fail(w, 503, errors.New("Gravitas sign-in is temporarily unavailable; please try again"))
 			}
 		})
@@ -108,4 +116,11 @@ func (s *Server) federated(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	}))
 	return mux
+}
+
+func defaultDomain(c *gravitas.Client) string {
+	if c == nil {
+		return ""
+	}
+	return c.DefaultDomain()
 }
