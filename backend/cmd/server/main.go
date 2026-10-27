@@ -8,10 +8,12 @@ import (
 	"net"
 	"net/http"
 	"office/backend/internal/gravitas"
+	"office/backend/internal/push"
 	"office/backend/internal/server"
 	"office/backend/internal/store"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 )
@@ -37,11 +39,20 @@ func main() {
 			log.Fatal(e)
 		}
 	}
+	publisher, e := push.Open(filepath.Join(*data, "office-push.json"))
+	if e != nil {
+		log.Fatal(e)
+	}
+	svc.Push = publisher
+	pushContext, stopPush := context.WithCancel(context.Background())
+	defer stopPush()
+	handler := svc.Handler()
+	go publisher.Run(pushContext)
 	ln, e := net.Listen("tcp", *listen)
 	if e != nil {
 		log.Fatal(e)
 	}
-	httpServer := &http.Server{Handler: svc.Handler(), ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 90 * time.Second}
+	httpServer := &http.Server{Handler: handler, ReadHeaderTimeout: 10 * time.Second, IdleTimeout: 90 * time.Second}
 	_ = json.NewEncoder(os.Stdout).Encode(map[string]string{"event": "ready", "url": "http://" + ln.Addr().String()})
 	done := make(chan os.Signal, 1)
 	signal.Notify(done, os.Interrupt, syscall.SIGTERM)

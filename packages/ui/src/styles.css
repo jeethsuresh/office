@@ -3686,3 +3686,48 @@ p {
     margin-right: 0;
   }
 }
+
+/* Constrain each scrolling surface to its actual parent viewport. */
+html, body, #root { width: 100%; height: 100%; min-width: 0; }
+.office-app { height: 100%; min-height: 0; width: 100%; }
+.main-area, .block-viewport, .document-view, .workspace-browser { min-width: 0; min-height: 0; }
+.connection-banner { flex-shrink: 0; min-width: 0; overflow-wrap: anywhere; }
+.modal { max-width: calc(100vw - 24px); max-height: calc(100dvh - 24px); overflow: auto; }
+.sidebar { max-width: calc(100vw - 24px); }
+@media (max-width: 360px) {
+  .breadcrumb { min-width: 0; }
+  .workspace-home-link { max-width: 70px; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-right { gap: 2px; }
+  .presence-avatars > :nth-child(n+2) { display: none; }
+}
+@media (pointer: coarse) {
+  input, textarea, select { font-size: max(16px, 1em); }
+  .icon-button, .tool-button { min-width: 40px; min-height: 40px; }
+  .editor-tools { min-width: 48px; }
+  .tool-list { gap: 6px; }
+  .block-heading .icon-button { min-width: 36px; min-height: 34px; }
+  .block-heading { min-height: 36px; }
+  .topbar-right > .icon-button { width: 40px; }
+  .sheet-formula-bar { min-height: 44px; }
+}
+@media (max-height: 500px) {
+  .block-viewport { --block-peek: 24px; --block-gap: 4px; }
+  .topbar { flex-shrink: 0; }
+  .modal { padding: 14px; }
+  .doc-paper { padding-block: 12px; }
+}
+
+/* Touch hit targets must be wide enough for the browser's tap adjustment. */
+@media (pointer: coarse) {
+ .minimap { --minimap-row: 32px; --minimap-controls: 48px; width: 56px; padding-inline: 6px; }
+ .minimap-segment { width: 36px; }
+ .minimap-block { width: 100%; }
+ .minimap-slide-scroll { height: 24px; }
+ .minimap-track { overflow-y: auto; overscroll-behavior: contain; }
+}
+
+/* The carousel gutter owns swipes without taking touch scrolling or selection
+   away from the editable slide contents. */
+.slides-workspace { position: relative; }
+.slide-swipe-strip { position: absolute; inset: 0 0 auto; height: 22px; z-index: 3; touch-action: none; }
+.slide-track { padding-top: 24px; }

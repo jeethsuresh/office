@@ -52,6 +52,7 @@ export function SlidesEditor({
   useShared(slideMoves(block));
   const track = useRef<HTMLDivElement>(null);
   const dots = useRef<HTMLDivElement>(null);
+  const swipe = useRef<{ pointer: number; x: number; y: number } | null>(null);
   const [active, setActive] = useState(0);
   const activeIndex = useRef(active);
   const scrollingTo = useRef<string | null>(null);
@@ -185,18 +186,25 @@ export function SlidesEditor({
       timer = setTimeout(settle, 180);
     };
     const interrupt = () => {
-      scrollingTo.current = null;
+      if (scrollingTo.current !== null) {
+        scrollingTo.current = null;
+        // A finger or wheel takes ownership immediately, including while an
+        // explicit navigation is still animating toward another slide.
+        element.scrollTo({ left: element.scrollLeft, behavior: "instant" });
+      }
     };
     element.addEventListener("scroll", scrolling);
     element.addEventListener("scrollend", settle);
     element.addEventListener("wheel", interrupt, { passive: true });
     element.addEventListener("touchmove", interrupt, { passive: true });
+    element.addEventListener("pointerdown", interrupt, { passive: true });
     return () => {
       clearTimeout(timer);
       element.removeEventListener("scroll", scrolling);
       element.removeEventListener("scrollend", settle);
       element.removeEventListener("wheel", interrupt);
       element.removeEventListener("touchmove", interrupt);
+      element.removeEventListener("pointerdown", interrupt);
     };
   }, [slides]);
   useLayoutEffect(() => {
@@ -312,7 +320,41 @@ export function SlidesEditor({
           }}
         />
       </EditorTools>
-      <div className="slides-workspace">
+      <div
+        className="slides-workspace"
+        onPointerDown={(event) => {
+          if (
+            event.pointerType !== "touch" ||
+            (event.target as Element).closest(
+              "input, textarea, [contenteditable=true], button, a, [draggable=true]",
+            )
+          )
+            return;
+          swipe.current = {
+            pointer: event.pointerId,
+            x: event.clientX,
+            y: event.clientY,
+          };
+          event.currentTarget.setPointerCapture(event.pointerId);
+        }}
+        onPointerCancel={() => {
+          swipe.current = null;
+        }}
+        onPointerUp={(event) => {
+          const start = swipe.current;
+          swipe.current = null;
+          if (!start || start.pointer !== event.pointerId) return;
+          if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          const dx = event.clientX - start.x,
+            dy = event.clientY - start.y;
+          if (Math.abs(dx) >= 40 && Math.abs(dx) > Math.abs(dy)) {
+            event.preventDefault();
+            go(activeIndex.current + (dx < 0 ? 1 : -1), "smooth");
+          }
+        }}
+      >
+        <div className="slide-swipe-strip" aria-hidden="true" />
         <div className="slide-track" ref={track}>
           {list.map((s, index) => (
             <SlideCard

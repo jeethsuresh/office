@@ -1,3 +1,6 @@
+import { disconnectPush } from "./push";
+import { DeviceFeatures } from "./pwa";
+import { readOfflineSession, rememberSession, forgetSession, networkFailure } from "./offlineSession";
 import React, { useEffect, useRef, useState } from "react";
 import { App } from "@office/ui";
 import { appReturnPath, automaticSignInURL } from "./automaticSignIn";
@@ -18,7 +21,7 @@ export function FederatedApp() {
   const monitorRef = useRef<ReturnType<typeof createSessionMonitor<User>> | null>(null);
   useEffect(() => {
     let cancelled = false, initialized = false;
-    void fetch("/auth/gravitas/config", { cache: "no-store" }).then(async response => {
+    void fetch("/auth/gravitas/config", { cache: "no-store", signal: AbortSignal.timeout(10_000) }).then(async response => {
       if (!response.ok) throw new Error("Unable to check sign-in");
       const config = await response.json() as { enabled: boolean; autoSignIn?: boolean; defaultDomain: string };
       if (cancelled) return;
@@ -26,21 +29,25 @@ export function FederatedApp() {
       setDefaultDomain(config.defaultDomain);
       federatedRef.current = true;
       sessionStorage.removeItem("office-auth-mode");
-      const session = await fetch("/auth/gravitas/session", { credentials: "same-origin", cache: "no-store" });
+      const session = await fetch("/auth/gravitas/session", { credentials: "same-origin", cache: "no-store", signal: AbortSignal.timeout(10_000) });
       if (cancelled) return;
-      if (session.ok) { const value = (await session.json() as { user: User }).user; if (cancelled) return; userRef.current = value; setUser(value); setAutoSignIn(config.autoSignIn === true); }
-      else if (session.status === 401) setAutoSignIn(config.autoSignIn === true);
+      if (session.ok) { const value = (await session.json() as { user: User }).user; if (cancelled) return; userRef.current = value; setUser(value); rememberSession({user: value, defaultDomain: config.defaultDomain}); setAutoSignIn(config.autoSignIn === true); }
+      else if (session.status === 401) { void disconnectPush(); forgetSession(); setAutoSignIn(config.autoSignIn === true); }
       else throw new Error("Sign-in is temporarily unavailable");
-    }).catch(() => {
+    }).catch((error) => {
       if (cancelled) return;
       if (["127.0.0.1", "localhost", "[::1]"].includes(location.hostname) && sessionStorage.getItem("office-auth-mode") === "local") setLocal(true);
-      else setError("Connect to the server to sign in with Gravitas.");
+      else {
+        const saved = readOfflineSession<{user: User; defaultDomain: string}>();
+        if (networkFailure(error) && saved) { federatedRef.current = true; userRef.current = saved.user; setUser(saved.user); setDefaultDomain(saved.defaultDomain); setError("Offline. Your opened documents remain editable on this device."); }
+        else setError("Connect to the server to sign in with Gravitas.");
+      }
     }).finally(() => { if (!cancelled) { initialized = true; setChecking(false); } });
     const monitor = createSessionMonitor<User>({
       sessionURL: "/auth/gravitas/session", configURL: "/auth/gravitas/config", logoutURL: "/auth/gravitas/logout", csrfHeader: "X-Gravitas-CSRF",
       isAuthenticated: () => userRef.current !== null,
-      onSession: value => { userRef.current = value; setUser(value); },
-      onRevoked: () => { userRef.current = null; setUser(null); },
+      onSession: value => { userRef.current = value; setUser(value); const saved = readOfflineSession<{defaultDomain: string}>(); if (saved) rememberSession({user: value, defaultDomain: saved.defaultDomain}); },
+      onRevoked: () => { void disconnectPush(); forgetSession(); userRef.current = null; setUser(null); },
       onAutoHint: setAutoSignIn,
       onUnavailable: value => setError(value ? "Sign-in is temporarily unavailable. Your local edits are kept on this device." : ""),
     });
@@ -51,9 +58,10 @@ export function FederatedApp() {
     const interval = setInterval(resume, 15_000);
     window.addEventListener("office:unauthorized", expired);
     window.addEventListener("focus", resume);
+    window.addEventListener("online", resume);
     window.addEventListener("pageshow", resume);
     document.addEventListener("visibilitychange", visibility);
-    return () => { cancelled = true; monitor.dispose(); clearInterval(interval); window.removeEventListener("office:unauthorized", expired); window.removeEventListener("focus", resume); window.removeEventListener("pageshow", resume); document.removeEventListener("visibilitychange", visibility); };
+    return () => { cancelled = true; monitor.dispose(); clearInterval(interval); window.removeEventListener("office:unauthorized", expired); window.removeEventListener("focus", resume); window.removeEventListener("online", resume); window.removeEventListener("pageshow", resume); document.removeEventListener("visibilitychange", visibility); };
   }, []);
   const automaticURL = automaticSignInURL({ enabled: autoSignIn && !local, hasSession: !!user, attempted: automaticAttempted.current, location });
   useEffect(() => {
@@ -61,7 +69,7 @@ export function FederatedApp() {
     automaticAttempted.current = true;
     window.location.replace(automaticURL);
   }, [checking, automaticURL]);
-  if (local) return <App />;
+  if (local) return <div className="office-signed-in"><div className="office-session-bar"><span>Office</span><DeviceFeatures /></div><div className="office-workspace"><App /></div></div>;
   if (checking || automaticURL) return <main className="office-auth"><p>Connecting to Gravitas…</p></main>;
   if (!user) {
     const next = appReturnPath(location);
@@ -81,6 +89,7 @@ export function FederatedApp() {
     </section></main>;
   }
   const logout = async () => {
+    await disconnectPush();
     try {
       const response = await fetch("/auth/gravitas/logout", { method: "POST", headers: { "X-Gravitas-CSRF": "1" }, credentials: "same-origin" });
       if (!response.ok) throw new Error("Unable to sign out");
@@ -89,5 +98,5 @@ export function FederatedApp() {
       userRef.current = null; setUser(null);
     } catch { setError("Sign-out failed. Please try again."); }
   };
-  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.user_id}</span><span>{error}</span><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={`${user.issuer}|${user.sub}`} /></div></div>;
+  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.user_id}</span><span role="status">{error}</span><DeviceFeatures /><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={`${user.issuer}|${user.sub}`} storageNamespace={`${user.issuer}|${user.sub}`} /></div></div>;
 }

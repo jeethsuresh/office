@@ -92,6 +92,11 @@ func (s *Server) federated(next http.Handler) http.Handler {
 				fail(w, 403, errors.New("request verification required"))
 				return
 			}
+			if s.Push != nil {
+				if cookie, err := r.Cookie(gravitas.SessionCookie); err == nil {
+					_ = s.Push.Revoke(cookie.Value)
+				}
+			}
 			c.ClearSession(w)
 			respond(w, 200, map[string]bool{"ok": true})
 		})

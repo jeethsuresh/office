@@ -120,7 +120,7 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     return (
       <div className="loading-document">
         <div className="loading-mark" />
-        <p>Loading document…</p>
+        <p>{state.status === "offline" ? "This document has not been saved on this device. Open it online first." : "Loading document…"}</p>
       </div>
     );
   return (
