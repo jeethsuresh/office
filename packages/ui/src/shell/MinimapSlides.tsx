@@ -31,6 +31,16 @@ export function MinimapSlides({
 }) {
   const viewport = useRef<HTMLDivElement>(null);
   const rowHeight = useRef(20);
+  const touch = useRef<{
+    pointer: number;
+    y: number;
+    x: number;
+    top: number;
+    at: number;
+    target: HTMLButtonElement | null;
+    moved: boolean;
+  } | null>(null);
+  const suppressClickUntil = useRef(0);
   const animation = useRef(0);
   const [browsing, setBrowsing] = useState(false);
   const windowed = slides.length > 5;
@@ -147,6 +157,58 @@ export function MinimapSlides({
         aria-label={`Slides in ${title}`}
         role="group"
         tabIndex={windowed ? 0 : undefined}
+        style={{ touchAction: "none" }}
+        onPointerDown={(event) => {
+          if (event.pointerType !== "touch") return;
+          event.preventDefault();
+          event.currentTarget.setPointerCapture(event.pointerId);
+          touch.current = {
+            pointer: event.pointerId,
+            y: event.clientY,
+            x: event.clientX,
+            top: event.currentTarget.scrollTop,
+            at: performance.now(),
+            target: (event.target as Element).closest<HTMLButtonElement>(
+              ".minimap-slide",
+            ),
+            moved: false,
+          };
+        }}
+        onPointerMove={(event) => {
+          const start = touch.current;
+          if (!start || start.pointer !== event.pointerId) return;
+          if (Math.hypot(event.clientX - start.x, event.clientY - start.y) >= 6)
+            start.moved = true;
+          if (start.moved)
+            event.currentTarget.scrollTop = start.top + start.y - event.clientY;
+        }}
+        onPointerCancel={() => {
+          touch.current = null;
+        }}
+        onPointerUp={(event) => {
+          const start = touch.current;
+          touch.current = null;
+          if (!start || start.pointer !== event.pointerId) return;
+          event.preventDefault();
+          if (event.currentTarget.hasPointerCapture(event.pointerId))
+            event.currentTarget.releasePointerCapture(event.pointerId);
+          suppressClickUntil.current = performance.now() + 500;
+          if (
+            !start.moved &&
+            performance.now() - start.at < 500 &&
+            !contextMenuOpen
+          )
+            start.target?.click();
+        }}
+        onClickCapture={(event) => {
+          if (
+            event.detail > 0 &&
+            performance.now() < suppressClickUntil.current
+          ) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }}
         onScroll={onScroll}
         onKeyDown={(event) => {
           if (event.target !== event.currentTarget) return;

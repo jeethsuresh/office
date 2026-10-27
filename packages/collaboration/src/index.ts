@@ -49,8 +49,11 @@ export class DocumentSession {
     this.awareness.on("update", this.onAwareness);
     this.awareness.on("change", this.emit);
     this.persistence.whenSynced
-      .then(() => {
+      .then(async () => {
+        const openedBefore = await this.persistence.get("opened");
         if (!this.disposed) {
+          this.hydrated = openedBefore === 1 || this.doc.store.clients.size > 0;
+          this.emit();
           this.connect();
         }
       })
@@ -129,6 +132,7 @@ export class DocumentSession {
       this.socket?.readyState === WebSocket.CONNECTING
     )
       return;
+    if (!navigator.onLine) { this.setStatus("offline"); return; }
     this.setStatus("connecting");
     this.ready = false;
     this.pending = 0;
@@ -155,6 +159,7 @@ export class DocumentSession {
         } else if (type === READY) {
           this.ready = true;
           this.hydrated = true;
+          void this.persistence.set("opened", 1).catch(() => {});
           this.retries = 0;
           this.error = "";
           const local = Y.encodeStateAsUpdate(this.doc),
@@ -205,7 +210,7 @@ export class DocumentSession {
         ),
         this,
       );
-      this.hydrated = true;
+      this.hydrated = this.hydrated || this.doc.store.clients.size > 0;
       this.setStatus("offline");
       if (event.code === 4401) {
         window.dispatchEvent(new Event("office:unauthorized"));

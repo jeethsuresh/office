@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"office/backend/internal/gravitas"
+	"office/backend/internal/push"
 	"office/backend/internal/store"
 	"os"
 	"path/filepath"
@@ -27,6 +28,7 @@ const (
 )
 
 type Server struct {
+	Push                *push.Service
 	Store               *store.Store
 	WebDir              string
 	AllowedOrigin       string
@@ -98,6 +100,7 @@ func (s *Server) originOK(r *http.Request) bool {
 }
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
+	s.pushRoutes(mux)
 	mux.HandleFunc("GET /api/health", func(w http.ResponseWriter, r *http.Request) { respond(w, 200, map[string]string{"status": "ok"}) })
 	sessionReady := func(w http.ResponseWriter, r *http.Request) {
 		if s.Federation == nil {
@@ -192,6 +195,21 @@ func str(p *string) string {
 	}
 	return *p
 }
+
+// Collaborator activity shares a single per-account round across documents.
+func (s *Server) notifyActivity(r *http.Request, document string) {
+	if s.Push == nil {
+		return
+	}
+	owner, _, _ := s.pushIdentity(r)
+	target := "/"
+	if document != "" {
+		target += "#document=" + url.QueryEscape(document)
+	}
+	if err := s.Push.Notify(document, owner, nil, push.Notification{Title: "Office collaborator updates", Body: "A round of changes is ready in your shared workspace.", URL: target, Tag: "office-collaboration"}); err != nil {
+		log.Printf("push outbox could not be saved")
+	}
+}
 func (s *Server) addFolder(w http.ResponseWriter, r *http.Request) {
 	m, ok := decode(w, r)
 	if !ok {
@@ -202,6 +220,9 @@ func (s *Server) addFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, e := s.Store.AddFolder(*m.Name, str(m.ParentID))
+	if e == nil {
+		s.notifyActivity(r, "")
+	}
 	result(w, v, e)
 }
 func (s *Server) addDocument(w http.ResponseWriter, r *http.Request) {
@@ -214,6 +235,9 @@ func (s *Server) addDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, e := s.Store.AddDocument(*m.Name, str(m.FolderID))
+	if e == nil {
+		s.notifyActivity(r, v.ID)
+	}
 	result(w, v, e)
 }
 func (s *Server) updateFolder(w http.ResponseWriter, r *http.Request) {
@@ -222,6 +246,9 @@ func (s *Server) updateFolder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, e := s.Store.UpdateFolder(r.PathValue("id"), m.Name, m.ParentID)
+	if e == nil {
+		s.notifyActivity(r, "")
+	}
 	result(w, v, e)
 }
 func (s *Server) updateDocument(w http.ResponseWriter, r *http.Request) {
@@ -230,10 +257,16 @@ func (s *Server) updateDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	v, e := s.Store.UpdateDocument(r.PathValue("id"), m.Name, m.FolderID)
+	if e == nil {
+		s.notifyActivity(r, v.ID)
+	}
 	result(w, v, e)
 }
 func (s *Server) deleteFolder(w http.ResponseWriter, r *http.Request) {
 	e := s.Store.DeleteFolder(r.PathValue("id"))
+	if e == nil {
+		s.notifyActivity(r, "")
+	}
 	result(w, map[string]bool{"deleted": e == nil}, e)
 }
 func (s *Server) deleteDocument(w http.ResponseWriter, r *http.Request) {
@@ -246,6 +279,9 @@ func (s *Server) deleteDocument(w http.ResponseWriter, r *http.Request) {
 		defer room.mu.Unlock()
 	}
 	e := s.Store.DeleteDocument(id)
+	if e == nil {
+		s.notifyActivity(r, "")
+	}
 	if e == nil && room != nil {
 		for c := range room.clients {
 			c.close()
@@ -273,6 +309,15 @@ func (s *Server) static(w http.ResponseWriter, r *http.Request) {
 		p = filepath.Join(s.WebDir, "index.html")
 	}
 	w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' ws: wss:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'")
+	if clean == "/sw.js" || clean == "/manifest.webmanifest" || filepath.Base(p) == "index.html" {
+		w.Header().Set("Cache-Control", "no-cache")
+	}
+	if clean == "/sw.js" {
+		w.Header().Set("Service-Worker-Allowed", "/")
+	}
+	if clean == "/manifest.webmanifest" {
+		w.Header().Set("Content-Type", "application/manifest+json")
+	}
 	http.ServeFile(w, r, p)
 }
 func (s *Server) getRoom(id string) (*room, error) {
@@ -412,6 +457,9 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 			}
 			room.updates = append(room.updates, append([]byte{}, b[1:]...))
 			c.enqueue([]byte{Ack})
+			if len(b) > 3 {
+				s.notifyActivity(r, id)
+			}
 		}
 		for other := range room.clients {
 			if other != c {

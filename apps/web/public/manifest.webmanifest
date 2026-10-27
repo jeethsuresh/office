@@ -1,0 +1,29 @@
+{
+  "id": "/",
+  "name": "Gravitas Office",
+  "short_name": "Office",
+  "description": "Opened documents stay editable offline. Document edits sync when you reconnect. Creating, moving, or deleting documents needs a connection.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone"
+  ],
+  "background_color": "#f5f4f0",
+  "theme_color": "#f5f4f0",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

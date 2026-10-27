@@ -42,7 +42,7 @@ function currentUser(): User {
     name: `Guest ${Math.floor(Math.random() * 900) + 100}`,
     color,
   };
-  localStorage.setItem("office:user", JSON.stringify(user));
+  try { localStorage.setItem("office:user", JSON.stringify(user)); } catch {}
   return user;
 }
 function SessionHeader({
@@ -118,14 +118,15 @@ function ConnectedDocument({
     </OfficeDataProvider>
   );
 }
-export function App() {
+export function App({ storageNamespace = "local" }: { storageNamespace?: string }) {
   const api = useMemo(() => new WorkspaceAPI(), []);
+  const workspaceKey = storageNamespace === "local" ? `office:workspace:${api.baseURL}` : `office:workspace:${storageNamespace}:${api.baseURL}`;
   const mobile = useMedia("(max-width: 760px)");
   const [workspace, setWorkspace] = useState<Workspace>(() => {
     try {
       return (
         JSON.parse(
-          localStorage.getItem(`office:workspace:${api.baseURL}`) ?? "null",
+          localStorage.getItem(workspaceKey) ?? "null",
         ) ?? empty
       );
     } catch {
@@ -138,6 +139,7 @@ export function App() {
   const showSidebar = route.view === "document" && sidebar;
   const [action, setAction] = useState<WorkspaceAction | null>(null);
   const [error, setError] = useState("");
+  const [storageError, setStorageError] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [user, setUser] = useState(currentUser);
   const [share, setShare] = useState(false);
@@ -147,10 +149,8 @@ export function App() {
     try {
       const data = await api.list();
       setWorkspace(data);
-      localStorage.setItem(
-        `office:workspace:${api.baseURL}`,
-        JSON.stringify(data),
-      );
+      try { localStorage.setItem(workspaceKey, JSON.stringify(data)); }
+      catch { setStorageError("Device storage is unavailable or full. This workspace list may not be available offline."); }
       setError("");
       setLoaded(true);
       const requested = readRoute();
@@ -254,7 +254,7 @@ export function App() {
   function saveUser(name: string) {
     const next = { ...user, name };
     setUser(next);
-    localStorage.setItem("office:user", JSON.stringify(next));
+    try { localStorage.setItem("office:user", JSON.stringify(next)); } catch {}
   }
   return (
     <div
@@ -335,6 +335,7 @@ export function App() {
             )}
           </div>
         </header>
+        {storageError && <div className="connection-banner" role="status">{storageError}</div>}
         {error && (
           <div className="connection-banner" role="status">
             <WifiOff size={15} />

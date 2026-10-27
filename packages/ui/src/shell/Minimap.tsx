@@ -17,6 +17,7 @@ import {
 import { Plus, Trash2, Undo2 } from "lucide-react";
 import { MinimapSlides } from "./MinimapSlides";
 import { BlockPreview } from "./BlockPreview";
+import { TouchButton } from "../shared/TouchButton";
 import { useMinimapDrag } from "./useMinimapDrag";
 import { useMinimapMenu } from "./useMinimapMenu";
 
@@ -144,10 +145,7 @@ export function Minimap({
                 {
                   "--block-color": BLOCK_META[kind]?.color ?? "#888",
                   flexGrow: 1,
-                  minHeight:
-                    28 +
-                    Math.min(5, slides.length) * 16 +
-                    (slides.length > 5 ? 28 : 0),
+                  minHeight: `calc(28px + ${Math.min(5, slides.length)} * var(--minimap-row, 16px) + ${slides.length > 5 ? "var(--minimap-controls, 28px)" : "0px"})`,
                 } as CSSProperties
               }
             >
@@ -204,10 +202,10 @@ export function Minimap({
                 />
               )}
               {onAddAt && index < blocks.length - 1 && (
-                <button
+                <TouchButton
                   className="minimap-gap"
                   aria-label={`Add block before ${blocks[index + 1].get("title") || "next block"}`}
-                  onClick={() => {
+                  onActivate={() => {
                     setTooltip(null);
                     onAddAt(blocks[index + 1].get("id"));
                   }}
@@ -215,7 +213,7 @@ export function Minimap({
                   <span>
                     <Plus size={13} />
                   </span>
-                </button>
+                </TouchButton>
               )}
             </div>
           );
