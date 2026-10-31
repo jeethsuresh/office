@@ -61,7 +61,7 @@ The mobile profile activates at 760px. It uses a drawer sidebar and narrower rai
 1. Add a component accepting `SlideProps` in `packages/ui/src/blocks/slideLayouts.tsx` or a separate file.
 2. Register `{label, component}` under a stable string ID in `slideLayouts`. The layout picker and add controls derive from this registry.
 3. Initialize any new shared types in `createSlide()` in `packages/model`. Use `Y.Text` for collaboratively edited text, `Y.Map` for fields, and `Y.Array` for ordered collections.
-4. Keep layout state inside the shared slide record; leave viewport, selection, and tool choices local to the UI.
+4. Keep layout state inside the shared slide record; leave viewport, selection, and tool choices local to the UI. `SlideViewport` lays out every slide at 1280 × 720 and scales the finished surface to fit. Use fixed composition units rather than viewport-dependent typography. Presentation promotes the same mounted carousel and switches its editors to read-only, preserving text wrapping and canvas view state.
 5. Preserve older field names or introduce an explicit schema migration when changing persisted records.
 
 No switch statement needs to change to register an additional slide layout.

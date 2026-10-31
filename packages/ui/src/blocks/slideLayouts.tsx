@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import type { DocumentSession } from "@office/collaboration";
 import { updateText, type SharedRecord } from "@office/model";
 import * as Y from "yjs";
@@ -25,16 +25,26 @@ export function SharedText({
   readOnly?: boolean;
 }) {
   useShared(text);
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const value = text.toString();
+  useLayoutEffect(() => {
+    const element = ref.current;
+    if (!element) return;
+    element.style.height = "0px";
+    element.style.height = `${element.scrollHeight}px`;
+  }, [value]);
   const data = useOfficeData(),
     [slash, setSlash] = useState<SlashState | null>(null);
   return (
     <>
       <textarea
+        ref={ref}
         className={`shared-text ${className ?? ""}`}
         aria-label={label}
-        value={text.toString()}
-        placeholder={label}
+        value={value}
+        placeholder={readOnly ? undefined : label}
         readOnly={readOnly}
+        tabIndex={readOnly ? -1 : undefined}
         rows={1}
         onChange={(event) => {
           updateText(text, event.target.value);
@@ -59,10 +69,16 @@ export function SharedText({
         onKeyDown={(event) => {
           if (slash && event.key === "Enter") {
             event.preventDefault();
-            event.currentTarget
-              .closest(".slide-card")
-              ?.querySelector<HTMLButtonElement>(".slash-command-list button")
-              ?.click();
+            (
+              event.currentTarget
+                .closest(".slide-card")
+                ?.querySelector<HTMLButtonElement>(
+                  ".slash-command-list button",
+                ) ??
+              document.querySelector<HTMLButtonElement>(
+                "[data-office-portal] .slash-command-list button",
+              )
+            )?.click();
           }
         }}
       />
@@ -122,24 +138,6 @@ function ContentSlide({ slide, session, readOnly }: SlideProps) {
         className="content-slide-title"
         readOnly={readOnly}
       />
-      <div className="slide-content-switch">
-        {!readOnly && (
-          <>
-            <button
-              aria-pressed={slide.get("contentKind") === "doc"}
-              onClick={() => slide.set("contentKind", "doc")}
-            >
-              Note
-            </button>
-            <button
-              aria-pressed={slide.get("contentKind") === "canvas"}
-              onClick={() => slide.set("contentKind", "canvas")}
-            >
-              Canvas
-            </button>
-          </>
-        )}
-      </div>
       <div className="slide-content-body">
         {slide.get("contentKind") === "canvas" ? (
           <CanvasEditor

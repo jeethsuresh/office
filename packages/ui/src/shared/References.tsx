@@ -1,4 +1,11 @@
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useRef,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import {
   FileText,
   Hash,
@@ -309,6 +316,17 @@ export function SlashPopover({
 }) {
   const [picking, setPicking] = useState(false);
   const root = useRef<HTMLDivElement>(null);
+  const [portal, setPortal] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    if (!root.current?.closest(".slide-page")) return;
+    const fullscreen = document.fullscreenElement as HTMLElement | null;
+    const slot = document.querySelector<HTMLElement>("[data-office-portal]");
+    setPortal(
+      slot && (!fullscreen || fullscreen.contains(slot))
+        ? slot
+        : (fullscreen ?? document.body),
+    );
+  }, []);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
       if (!root.current?.contains(event.target as globalThis.Node)) onClose();
@@ -319,7 +337,7 @@ export function SlashPopover({
   const matches = [...slashCommands.values()].filter((command) =>
     command.id.startsWith(state.query.replace(/^\//, "")),
   );
-  return (
+  const content = (
     <div
       ref={root}
       className="slash-popover"
@@ -369,6 +387,7 @@ export function SlashPopover({
       )}
     </div>
   );
+  return portal ? createPortal(content, portal) : content;
 }
 export function CopyReference({
   urn,

@@ -338,7 +338,8 @@ export function EditorFullscreenProvider({
       if (event.key === "Escape") {
         if (container.querySelector(".minimap.is-dragging")) return;
         if (container.querySelector(".minimap-context-menu")) return;
-        if (root.querySelector(".slash-popover, .reference-picker")) return;
+        if (container.querySelector(".slash-popover, .reference-picker"))
+          return;
         event.preventDefault();
         event.stopImmediatePropagation();
         void exit();
@@ -461,6 +462,9 @@ export function EditorTools({
   const [fullscreenSlot, setFullscreenSlot] = useState<HTMLElement | null>(
     null,
   );
+  const [slideToolsSlot, setSlideToolsSlot] = useState<HTMLElement | null>(
+    null,
+  );
   const identity = fullscreen.identity;
   const setFocused = block?.setFocused;
   const fallback = block?.fallback;
@@ -488,6 +492,19 @@ export function EditorTools({
         ?.querySelector<HTMLElement>("[data-workspace-fullscreen]") ?? null,
     );
   }, [fullscreen.ref, workspace?.header]);
+  const slideHost = scope?.target?.element.matches(
+    ".slides-editor, .slide-card",
+  )
+    ? scope.target
+    : null;
+  useEffect(() => {
+    const tools = slideHost
+      ? [
+          ...slideHost.element.querySelectorAll<HTMLElement>(".editor-tools"),
+        ].find((element) => element.dataset.editorIdentity === slideHost.id)
+      : null;
+    setSlideToolsSlot(tools?.querySelector<HTMLElement>(".tool-list") ?? null);
+  }, [slideHost]);
   if (workspace && block && !scope?.target) {
     // Keep editor-owned actions mounted in their attached window header while
     // another editor (for example a note inside a slide) owns the global tools.
@@ -519,14 +536,51 @@ export function EditorTools({
       </>
     );
   }
+  // Embedded tools stay outside the scaled composition in fullscreen, too.
+  // The focused slide/deck's rail owns navigation and the exit control.
+  if (
+    slideHost &&
+    !fullscreen.active &&
+    fullscreen.ref.current &&
+    slideHost.element.contains(fullscreen.ref.current)
+  ) {
+    if (!block?.active || block.focused !== identity || !slideToolsSlot)
+      return (
+        <div hidden inert>
+          {children}
+        </div>
+      );
+    return createPortal(
+      <div className="focused-slide-tools" role="toolbar" aria-label={label}>
+        {children}
+        <span className="tool-divider" />
+        <ToolButton label={fullscreenLabel} onClick={fullscreen.enter}>
+          <Maximize2 size={17} />
+        </ToolButton>
+      </div>,
+      slideToolsSlot,
+    );
+  }
+  const borrowed =
+    fullscreen.active &&
+    slideHost &&
+    block &&
+    /:(doc|canvas)$/.test(block.focused);
   const expanded = fullscreen.active && !!scope?.expanded;
   return (
     <div
       className={`editor-tools ${className ?? ""} ${expanded ? "map-expanded" : ""}`}
       aria-label={label}
+      data-editor-identity={identity}
     >
       <div className="tool-list" inert={expanded}>
-        {children}
+        {borrowed ? (
+          <div hidden inert>
+            {children}
+          </div>
+        ) : (
+          children
+        )}
       </div>
       {fullscreen.active && scope && <FullscreenNavigator />}
       <div className="tool-footer">
