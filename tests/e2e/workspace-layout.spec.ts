@@ -86,8 +86,10 @@ for (const width of [390, 844, 1600]) {
       ).toBeVisible();
       // Deck history/export actions stay attached while embedded text has focus.
       await expect(
-        page.locator(".office-block.is-active .block-heading .block-actions"),
-      ).not.toBeEmpty();
+        page.locator(
+          ".office-block.is-active .block-heading .block-actions button",
+        ),
+      ).toHaveCount(4);
       await header.getByRole("button", { name: "Bold", exact: true }).click();
       await note.press("End");
       await note.pressSequentially(" in bold");
