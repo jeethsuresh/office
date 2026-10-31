@@ -65,8 +65,8 @@ for (const mobile of [false, true]) {
       await note.press("End");
       await note.press("Enter");
       await note.pressSequentially("Remove this");
-      await block
-        .locator(".editor-tools")
+      await page
+        .locator(".workspace-tools")
         .getByRole("button", {
           name: "Delete selected text element",
           exact: true,

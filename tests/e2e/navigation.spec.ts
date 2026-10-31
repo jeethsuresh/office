@@ -170,6 +170,7 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
   await expect(canvas).toHaveAttribute("viewBox", position!);
   await assertPinned(page, "canvas");
   await page.getByRole("button", { name: "Map: slide 2", exact: true }).click();
+  await page.getByLabel("Slide note", { exact: true }).focus();
   await page
     .getByRole("button", { name: "Fullscreen slide note", exact: true })
     .click();
@@ -189,6 +190,10 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
     "Full-size slide writing.",
   );
   await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await page
+    .getByLabel("Drawing workspace", { exact: true })
+    .filter({ visible: true })
+    .focus();
   await page
     .getByRole("button", { name: "Fullscreen slide canvas", exact: true })
     .click();
@@ -258,24 +263,23 @@ for (const viewport of [
     const editor = page.locator(".slide-content-body .doc-editor");
     const layout = await editor.evaluate((el) => {
       const panel = el.getBoundingClientRect();
-      const tools = el.querySelector(".editor-tools")!.getBoundingClientRect();
       const paper = el.querySelector(".doc-paper")!.getBoundingClientRect();
       const prose = el.querySelector(".prose")!.getBoundingClientRect();
       const paragraph = el.querySelector(".prose p")!.getBoundingClientRect();
       return {
         panel: panel.toJSON(),
-        tools: tools.toJSON(),
         paper: paper.toJSON(),
         prose: prose.toJSON(),
         paragraph: paragraph.toJSON(),
       };
     });
-    expect(layout.tools.height).toBeCloseTo(layout.panel.height);
+    expect(layout.paper.width).toBeCloseTo(layout.panel.width);
     expect(layout.paper.height).toBeCloseTo(layout.panel.height);
     expect(layout.paragraph.top).toBeCloseTo(layout.prose.top);
     expect(layout.paragraph.left).toBeCloseTo(layout.prose.left);
     expect(layout.prose.width).toBeGreaterThan(90);
     await assertPinned(page, "slides");
+    await page.getByLabel("Slide note", { exact: true }).focus();
     await page
       .getByRole("button", { name: "Fullscreen slide note", exact: true })
       .click();
@@ -586,6 +590,7 @@ test("mobile fullscreen navigator opens by tap and moves between individually fo
     );
     await page.goto(baseURL!);
     await page.getByRole("button", { name: "Map: slide 2", exact: true }).tap();
+    await page.getByLabel("Slide note", { exact: true }).focus();
     await page
       .getByRole("button", { name: "Fullscreen slide note", exact: true })
       .tap();

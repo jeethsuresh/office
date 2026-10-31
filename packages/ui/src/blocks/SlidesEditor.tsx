@@ -27,6 +27,7 @@ import { ToolButton } from "../shared/Toolbar";
 import { BlockActions, downloadFile } from "../shared/BlockActions";
 import { slideLayouts } from "./slideLayouts";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
+import { useBlockTools } from "../shared/WorkspaceTools";
 import {
   CopyReference,
   ReferencePicker,
@@ -46,6 +47,7 @@ export function SlidesEditor({
   requestToken?: number;
 }) {
   const fullscreen = useEditorFullscreen(`block:${block.get("id")}`);
+  const blockTools = useBlockTools();
   const slides = block.get("slides") as Y.Array<SharedRecord>;
   useShared(slides);
   useShared(block);
@@ -238,6 +240,10 @@ export function SlidesEditor({
     }, 30);
   }
   const slide = list[Math.min(active, list.length - 1)];
+  const setFocusedTool = blockTools?.setFocused;
+  useEffect(() => {
+    setFocusedTool?.(`block:${block.get("id")}`);
+  }, [slide?.get("id"), setFocusedTool, block]);
   const Presentation = slide
     ? (slideLayouts[slide.get("layout")] ?? slideLayouts.content).component
     : null;

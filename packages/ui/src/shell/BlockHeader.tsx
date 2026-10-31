@@ -14,6 +14,7 @@ import { Backlinks, CopyReference } from "../shared/References";
 import { useFullscreenController } from "../shared/Fullscreen";
 import { BlockUpdated } from "./BlockUpdated";
 import { ToolButton } from "../shared/Toolbar";
+import { useBlockTools } from "../shared/WorkspaceTools";
 
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
 
@@ -43,6 +44,7 @@ export function BlockHeader({
   const actions = useRef<HTMLDivElement>(null);
   const menuID = useId();
   const fullscreen = useFullscreenController();
+  const tools = useBlockTools();
   const [compact, setCompact] = useState(false);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ left: 0, top: 0, height: 0 });
@@ -180,6 +182,8 @@ export function BlockHeader({
       className={`block-heading ${compact ? "is-compact" : ""} ${!active && direction ? `is-${direction}` : ""}`}
       inert={hidden}
       aria-hidden={hidden}
+      onFocusCapture={() => active && tools?.setFocused(tools.fallback)}
+      onPointerDownCapture={() => active && tools?.setFocused(tools.fallback)}
     >
       {!active && direction ? (
         <button

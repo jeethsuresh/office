@@ -251,11 +251,7 @@ export function Minimap({
               </button>
             )}
           </div>
-          <div className="minimap-legend">
-            <i style={{ background: BLOCK_META.doc.color }} />
-            <i style={{ background: BLOCK_META.slides.color }} />
-            <i style={{ background: BLOCK_META.canvas.color }} />
-          </div>
+          <div className="minimap-fullscreen" data-workspace-fullscreen />
         </>
       )}
       {tooltip && !drag.dragging && (

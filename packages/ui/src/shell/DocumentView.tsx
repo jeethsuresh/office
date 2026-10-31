@@ -25,6 +25,7 @@ import { ReferenceNavigation } from "../shared/ReferenceNavigation";
 import { BlockActionsProvider } from "../shared/BlockActions";
 import { BlockHeader } from "./BlockHeader";
 import { useBlockMotion } from "./useBlockMotion";
+import { BlockToolsProvider } from "../shared/WorkspaceTools";
 const icons = { doc: FileText, canvas: PenTool, slides: Layout, sheet: Table2 };
 function BlockBoundaryAdd({
   direction,
@@ -120,7 +121,11 @@ export function DocumentView({ session }: { session: DocumentSession }) {
     return (
       <div className="loading-document">
         <div className="loading-mark" />
-        <p>{state.status === "offline" ? "This document has not been saved on this device. Open it online first." : "Loading document…"}</p>
+        <p>
+          {state.status === "offline"
+            ? "This document has not been saved on this device. Open it online first."
+            : "Loading document…"}
+        </p>
       </div>
     );
   return (
@@ -168,77 +173,79 @@ export function DocumentView({ session }: { session: DocumentSession }) {
             const kind = block.get("kind") as BlockKind;
             return (
               <BlockActionsProvider key={id} onDelete={() => setDeleteID(id)}>
-                <section
-                  key={id}
-                  data-block-id={id}
-                  className={`office-block block-${kind} ${active === id ? "is-active" : ""} ${Math.abs(index - activeIndex) === 1 ? "is-neighbor" : ""}`}
-                  style={
-                    {
-                      "--block-color": BLOCK_META[kind]?.color,
-                      "--block-offset": index - visibleIndex,
-                    } as React.CSSProperties
-                  }
-                >
-                  <div className="block-editor">
-                    <BlockHeader
-                      block={block}
-                      documentID={session.id}
-                      index={index}
-                      count={list.length}
-                      active={active === id}
-                      direction={
-                        index === activeIndex - 1
-                          ? "previous"
-                          : index === activeIndex + 1
-                            ? "next"
-                            : undefined
-                      }
-                      previous={list[index - 1]}
-                      next={list[index + 1]}
-                      onNavigate={navigate}
-                    />
-                    <div
-                      className="block-body"
-                      inert={active !== id}
-                      aria-hidden={active !== id}
-                    >
-                      {kind === "doc" ? (
-                        <DocEditor
-                          fragment={block.get("content")}
-                          session={session}
-                        />
-                      ) : kind === "canvas" ? (
-                        <CanvasEditor
-                          shapes={block.get("shapes")}
-                          scope={id}
-                          session={session}
-                        />
-                      ) : kind === "slides" ? (
-                        <SlidesEditor
-                          block={block}
-                          session={session}
-                          onActiveSlide={(slide) =>
-                            setActiveSlides((prev) =>
-                              prev[id] === slide
-                                ? prev
-                                : { ...prev, [id]: slide },
-                            )
-                          }
-                          requestedSlide={
-                            request && request.block === id
-                              ? request.slide
+                <BlockToolsProvider blockID={id} active={active === id}>
+                  <section
+                    key={id}
+                    data-block-id={id}
+                    className={`office-block block-${kind} ${active === id ? "is-active" : ""} ${Math.abs(index - activeIndex) === 1 ? "is-neighbor" : ""}`}
+                    style={
+                      {
+                        "--block-color": BLOCK_META[kind]?.color,
+                        "--block-offset": index - visibleIndex,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className="block-editor">
+                      <BlockHeader
+                        block={block}
+                        documentID={session.id}
+                        index={index}
+                        count={list.length}
+                        active={active === id}
+                        direction={
+                          index === activeIndex - 1
+                            ? "previous"
+                            : index === activeIndex + 1
+                              ? "next"
                               : undefined
-                          }
-                          requestToken={request?.token}
-                        />
-                      ) : kind === "sheet" ? (
-                        <SheetEditor block={block} session={session} />
-                      ) : (
-                        <p>This block type is not registered.</p>
-                      )}
+                        }
+                        previous={list[index - 1]}
+                        next={list[index + 1]}
+                        onNavigate={navigate}
+                      />
+                      <div
+                        className="block-body"
+                        inert={active !== id}
+                        aria-hidden={active !== id}
+                      >
+                        {kind === "doc" ? (
+                          <DocEditor
+                            fragment={block.get("content")}
+                            session={session}
+                          />
+                        ) : kind === "canvas" ? (
+                          <CanvasEditor
+                            shapes={block.get("shapes")}
+                            scope={id}
+                            session={session}
+                          />
+                        ) : kind === "slides" ? (
+                          <SlidesEditor
+                            block={block}
+                            session={session}
+                            onActiveSlide={(slide) =>
+                              setActiveSlides((prev) =>
+                                prev[id] === slide
+                                  ? prev
+                                  : { ...prev, [id]: slide },
+                              )
+                            }
+                            requestedSlide={
+                              request && request.block === id
+                                ? request.slide
+                                : undefined
+                            }
+                            requestToken={request?.token}
+                          />
+                        ) : kind === "sheet" ? (
+                          <SheetEditor block={block} session={session} />
+                        ) : (
+                          <p>This block type is not registered.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
+                </BlockToolsProvider>
               </BlockActionsProvider>
             );
           })}

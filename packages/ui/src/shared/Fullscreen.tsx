@@ -9,7 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import type * as Y from "yjs";
 import { orderedSlides, type SharedRecord } from "@office/model";
 import {
@@ -19,6 +19,7 @@ import {
 import { FullscreenNavigator } from "./FullscreenNavigator";
 import { Maximize2, X } from "lucide-react";
 import { ToolButton } from "./Toolbar";
+import { useBlockTools, useWorkspaceTools } from "./WorkspaceTools";
 
 // Promote the existing DOM subtree: collaboration, selection, and local canvas
 // view state stay attached to the same editor throughout the transition.
@@ -384,7 +385,7 @@ export function EditorFullscreenProvider({
         else
           container
             .querySelector<HTMLElement>(
-              ".office-block.is-active .fullscreen-enter button, .office-block.is-active button.fullscreen-enter",
+              ".document-view > .minimap [data-workspace-fullscreen] button, .office-block.is-active .fullscreen-enter button, .office-block.is-active button.fullscreen-enter",
             )
             ?.focus({ preventScroll: true });
       });
@@ -426,9 +427,10 @@ export function useEditorFullscreen(identity?: string) {
     const element = standalone.ref.current;
     if (scope && element) return scope.register(id, element);
   });
-  if (!scope) return standalone;
+  if (!scope) return { ...standalone, identity: id };
   const active = scope.target?.id === id;
   return {
+    identity: id,
     ref: standalone.ref,
     active,
     enter: () => {
@@ -454,6 +456,69 @@ export function EditorTools({
   fullscreenLabel: string;
 }) {
   const scope = useFullscreenController();
+  const workspace = useWorkspaceTools();
+  const block = useBlockTools();
+  const [fullscreenSlot, setFullscreenSlot] = useState<HTMLElement | null>(
+    null,
+  );
+  const identity = fullscreen.identity;
+  const setFocused = block?.setFocused;
+  const fallback = block?.fallback;
+  useEffect(() => {
+    const element = fullscreen.ref.current;
+    if (!element || !setFocused) return;
+    const focus = (event: Event) => {
+      const owner = (event.target as Element).closest(
+        ".doc-editor, .canvas-editor, .slides-editor, .sheet-editor",
+      );
+      if (owner === element) setFocused(identity);
+    };
+    element.addEventListener("focusin", focus);
+    element.addEventListener("pointerdown", focus);
+    return () => {
+      element.removeEventListener("focusin", focus);
+      element.removeEventListener("pointerdown", focus);
+      setFocused((previous) => (previous === identity ? fallback! : previous));
+    };
+  }, [fullscreen.ref, identity, setFocused, fallback]);
+  useEffect(() => {
+    setFullscreenSlot(
+      fullscreen.ref.current
+        ?.closest(".document-view")
+        ?.querySelector<HTMLElement>("[data-workspace-fullscreen]") ?? null,
+    );
+  }, [fullscreen.ref, workspace?.header]);
+  if (workspace && block && !scope?.target) {
+    // Keep editor-owned actions mounted in their attached window header while
+    // another editor (for example a note inside a slide) owns the global tools.
+    if (!block.active || block.focused !== identity || !workspace.header)
+      return (
+        <div hidden inert>
+          {children}
+        </div>
+      );
+    return (
+      <>
+        {createPortal(
+          <div
+            className={`editor-tools header-editor-tools ${className ?? ""}`}
+            role="toolbar"
+            aria-label={label}
+          >
+            <div className="tool-list">{children}</div>
+          </div>,
+          workspace.header,
+        )}
+        {fullscreenSlot &&
+          createPortal(
+            <ToolButton label={fullscreenLabel} onClick={fullscreen.enter}>
+              <Maximize2 size={17} />
+            </ToolButton>,
+            fullscreenSlot,
+          )}
+      </>
+    );
+  }
   const expanded = fullscreen.active && !!scope?.expanded;
   return (
     <div

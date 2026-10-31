@@ -49,7 +49,7 @@ for (const width of [1400, 844, 390])
         name: "More block actions",
         exact: true,
       });
-      if (width < 1400) {
+      if (width < 844) {
         await expect(overflow).toBeVisible();
         await overflow.focus();
         await page.keyboard.press("ArrowDown");
@@ -117,7 +117,7 @@ for (const width of [1400, 844, 390])
         /is-navigating/,
       );
       const canvas = page.locator(".office-block.is-active .canvas-editor");
-      const tools = canvas.getByLabel("Canvas tools", { exact: true });
+      const tools = page.getByLabel("Canvas tools", { exact: true });
       const zoom = tools.getByLabel("Canvas zoom level", { exact: true });
       await expect(page.locator(".canvas-caption")).toHaveCount(0);
       await expect(zoom).toHaveText("100%");
@@ -130,13 +130,13 @@ for (const width of [1400, 844, 390])
         minus = (await tools
           .getByRole("button", { name: "Zoom out", exact: true })
           .boundingBox())!;
-      expect(zoomBounds.y).toBeGreaterThanOrEqual(plus.y + plus.height);
-      expect(zoomBounds.y + zoomBounds.height).toBeLessThanOrEqual(minus.y);
+      expect(zoomBounds.x).toBeGreaterThanOrEqual(plus.x + plus.width);
+      expect(zoomBounds.x + zoomBounds.width).toBeLessThanOrEqual(minus.x);
       await tools
         .getByRole("button", { name: "Zoom out", exact: true })
         .click();
       await expect(zoom).toHaveText("100%");
-      await tools
+      await page
         .getByRole("button", { name: "Fullscreen canvas", exact: true })
         .click();
       await expect(canvas).toHaveClass(/editor-fullscreen/);

@@ -4,9 +4,7 @@ import {
   Check,
   ChevronRight,
   Copy,
-  Menu,
   MoreHorizontal,
-  PanelLeft,
   Users,
   WifiOff,
   X,
@@ -15,7 +13,10 @@ import { DocumentSession, type User } from "@office/collaboration";
 import { WorkspaceAPI, type Workspace, type DocumentMeta } from "./shared/api";
 import { useMedia, useSession } from "./shared/hooks";
 import { Modal } from "./shared/Modal";
-import { Sidebar } from "./shell/Sidebar";
+import {
+  WorkspaceToolsProvider,
+  WorkspaceToolsSlot,
+} from "./shared/WorkspaceTools";
 import { DocumentView } from "./shell/DocumentView";
 import { WorkspaceDialog, type WorkspaceAction } from "./shell/WorkspaceDialog";
 import { WorkspaceBrowser } from "./shell/WorkspaceBrowser";
@@ -42,7 +43,9 @@ function currentUser(): User {
     name: `Guest ${Math.floor(Math.random() * 900) + 100}`,
     color,
   };
-  try { localStorage.setItem("office:user", JSON.stringify(user)); } catch {}
+  try {
+    localStorage.setItem("office:user", JSON.stringify(user));
+  } catch {}
   return user;
 }
 function SessionHeader({
@@ -118,25 +121,33 @@ function ConnectedDocument({
     </OfficeDataProvider>
   );
 }
-export function App({ storageNamespace = "local" }: { storageNamespace?: string }) {
+export function App(props: { storageNamespace?: string }) {
+  return (
+    <WorkspaceToolsProvider>
+      <OfficeApp {...props} />
+    </WorkspaceToolsProvider>
+  );
+}
+function OfficeApp({
+  storageNamespace = "local",
+}: {
+  storageNamespace?: string;
+}) {
   const api = useMemo(() => new WorkspaceAPI(), []);
-  const workspaceKey = storageNamespace === "local" ? `office:workspace:${api.baseURL}` : `office:workspace:${storageNamespace}:${api.baseURL}`;
+  const workspaceKey =
+    storageNamespace === "local"
+      ? `office:workspace:${api.baseURL}`
+      : `office:workspace:${storageNamespace}:${api.baseURL}`;
   const mobile = useMedia("(max-width: 760px)");
   const [workspace, setWorkspace] = useState<Workspace>(() => {
     try {
-      return (
-        JSON.parse(
-          localStorage.getItem(workspaceKey) ?? "null",
-        ) ?? empty
-      );
+      return JSON.parse(localStorage.getItem(workspaceKey) ?? "null") ?? empty;
     } catch {
       return empty;
     }
   });
   const [route, setRoute] = useState(readRoute);
   const selected = route.view === "document" ? route.id : "";
-  const [sidebar, setSidebar] = useState(true);
-  const showSidebar = route.view === "document" && sidebar;
   const [action, setAction] = useState<WorkspaceAction | null>(null);
   const [error, setError] = useState("");
   const [storageError, setStorageError] = useState("");
@@ -149,8 +160,13 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
     try {
       const data = await api.list();
       setWorkspace(data);
-      try { localStorage.setItem(workspaceKey, JSON.stringify(data)); }
-      catch { setStorageError("Device storage is unavailable or full. This workspace list may not be available offline."); }
+      try {
+        localStorage.setItem(workspaceKey, JSON.stringify(data));
+      } catch {
+        setStorageError(
+          "Device storage is unavailable or full. This workspace list may not be available offline.",
+        );
+      }
       setError("");
       setLoaded(true);
       const requested = readRoute();
@@ -216,12 +232,12 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
           browserSearch.focus();
           return;
         }
-        setSidebar(true);
+        location.hash = "view=workspace";
         setTimeout(
           () =>
             globalThis.document
               .querySelector<HTMLInputElement>(
-                '[aria-label="Search documents"]',
+                '[aria-label="Search this folder"]',
               )
               ?.focus(),
           50,
@@ -234,18 +250,13 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
       window.removeEventListener("keydown", key);
     };
   }, []);
-  useEffect(() => {
-    if (mobile) setSidebar(false);
-  }, [mobile]);
   function select(id: string) {
     setRoute({ view: "document", id });
     location.hash = `document=${id}`;
-    if (mobile) setSidebar(false);
   }
   function browse(folder = "") {
     setRoute({ view: "workspace", folder });
     location.hash = `view=workspace${folder ? `&folder=${encodeURIComponent(folder)}` : ""}`;
-    if (mobile) setSidebar(false);
   }
   const document = workspace.documents.find((d) => d.id === selected);
   const folder = document
@@ -254,48 +265,30 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
   function saveUser(name: string) {
     const next = { ...user, name };
     setUser(next);
-    try { localStorage.setItem("office:user", JSON.stringify(next)); } catch {}
+    try {
+      localStorage.setItem("office:user", JSON.stringify(next));
+    } catch {}
   }
   return (
     <div
-      className={`office-app ${showSidebar ? "sidebar-open" : "sidebar-closed"} ${mobile ? "mobile-profile" : "desktop-profile"}`}
+      className={`office-app ${mobile ? "mobile-profile" : "desktop-profile"}`}
     >
-      {showSidebar && (
-        <>
-          {mobile && (
-            <button
-              className="sidebar-scrim"
-              aria-label="Close document menu"
-              onClick={() => setSidebar(false)}
-            />
-          )}
-          <Sidebar
-            workspace={workspace}
-            selected={selected}
-            onSelect={select}
-            onCreateDocument={(parent) =>
-              setAction({ kind: "new-document", parent })
-            }
-            onCreateFolder={(parent) =>
-              setAction({ kind: "new-folder", parent })
-            }
-            onManage={setAction}
-            onWorkspace={() => browse()}
-            onClose={() => setSidebar(false)}
-          />
-        </>
-      )}
       <main className="main-area">
         <header className="topbar">
-          {route.view === "document" && (
-            <button
-              className="icon-button"
-              aria-label="Toggle sidebar"
-              onClick={() => setSidebar(!sidebar)}
-            >
-              {mobile ? <Menu size={19} /> : <PanelLeft size={18} />}
-            </button>
-          )}
+          <button
+            className="header-brand"
+            aria-label="Open workspace"
+            onClick={() => browse()}
+          >
+            <span className="brand-mark" aria-hidden="true">
+              <i />
+              <i />
+              <i />
+            </span>
+            <span>
+              office<span className="brand-dot">.</span>
+            </span>
+          </button>
           <div className="breadcrumb">
             <button
               className="workspace-home-link"
@@ -317,6 +310,7 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
               </>
             )}
           </div>
+          <WorkspaceToolsSlot />
           <div className="topbar-right">
             {document && session && (
               <SessionHeader session={session} onShare={() => setShare(true)} />
@@ -335,7 +329,11 @@ export function App({ storageNamespace = "local" }: { storageNamespace?: string 
             )}
           </div>
         </header>
-        {storageError && <div className="connection-banner" role="status">{storageError}</div>}
+        {storageError && (
+          <div className="connection-banner" role="status">
+            {storageError}
+          </div>
+        )}
         {error && (
           <div className="connection-banner" role="status">
             <WifiOff size={15} />
