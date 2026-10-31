@@ -170,6 +170,7 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
   await expect(canvas).toHaveAttribute("viewBox", position!);
   await assertPinned(page, "canvas");
   await page.getByRole("button", { name: "Map: slide 2", exact: true }).click();
+  await page.getByLabel("Slide note", { exact: true }).focus();
   await page
     .getByRole("button", { name: "Fullscreen slide note", exact: true })
     .click();
@@ -189,6 +190,10 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
     "Full-size slide writing.",
   );
   await page.getByRole("button", { name: "Canvas", exact: true }).click();
+  await page
+    .locator(".office-block.is-active .slide-content-body")
+    .getByLabel("Drawing workspace", { exact: true })
+    .focus();
   await page
     .getByRole("button", { name: "Fullscreen slide canvas", exact: true })
     .click();
@@ -258,24 +263,23 @@ for (const viewport of [
     const editor = page.locator(".slide-content-body .doc-editor");
     const layout = await editor.evaluate((el) => {
       const panel = el.getBoundingClientRect();
-      const tools = el.querySelector(".editor-tools")!.getBoundingClientRect();
       const paper = el.querySelector(".doc-paper")!.getBoundingClientRect();
       const prose = el.querySelector(".prose")!.getBoundingClientRect();
       const paragraph = el.querySelector(".prose p")!.getBoundingClientRect();
       return {
         panel: panel.toJSON(),
-        tools: tools.toJSON(),
         paper: paper.toJSON(),
         prose: prose.toJSON(),
         paragraph: paragraph.toJSON(),
       };
     });
-    expect(layout.tools.height).toBeCloseTo(layout.panel.height);
+    expect(layout.paper.width).toBeCloseTo(layout.panel.width);
     expect(layout.paper.height).toBeCloseTo(layout.panel.height);
     expect(layout.paragraph.top).toBeCloseTo(layout.prose.top);
     expect(layout.paragraph.left).toBeCloseTo(layout.prose.left);
     expect(layout.prose.width).toBeGreaterThan(90);
     await assertPinned(page, "slides");
+    await page.getByLabel("Slide note", { exact: true }).focus();
     await page
       .getByRole("button", { name: "Fullscreen slide note", exact: true })
       .click();
@@ -397,11 +401,12 @@ for (const viewport of [
       const bounds = track.getBoundingClientRect();
       return {
         height: bounds.height,
+        availableHeight: el.getBoundingClientRect().height,
         top: markers[0].getBoundingClientRect().top - bounds.top,
         bottom: bounds.bottom - markers.at(-1)!.getBoundingClientRect().bottom,
       };
     });
-    expect(layout.height).toBeGreaterThan(viewport.height * 0.6);
+    expect(layout.height).toBeGreaterThan(layout.availableHeight * 0.6);
     expect(layout.top).toBeLessThan(6);
     expect(layout.bottom).toBeLessThan(6);
     await map
@@ -436,26 +441,27 @@ test("horizontal wheel scrolling snaps slides in both directions and fullscreen,
   await page.goto("/");
   await page.getByRole("button", { name: "Map: slide 1", exact: true }).click();
   const track = page.locator(".slide-track");
+  const distance = (await track.boundingBox())!.width * 0.8;
   await atCenter(page, track);
-  await page.mouse.wheel(550, 0);
+  await page.mouse.wheel(distance, 0);
   await expectSlideSnap(page, 1);
   await assertPinned(page, "slides");
   await page.getByRole("button", { name: "Canvas", exact: true }).click();
   const canvas = page.locator(".slide-card.current .drawing-surface");
   const before = await canvas.getAttribute("viewBox");
   await atCenter(page, canvas);
-  await page.mouse.wheel(-550, 0);
+  await page.mouse.wheel(-distance, 0);
   await expect(canvas).not.toHaveAttribute("viewBox", before!);
   await expectSlideSnap(page, 1);
   await page.getByRole("button", { name: "Note", exact: true }).click();
   await atCenter(page, page.locator(".slide-card.current .doc-paper"));
-  await page.mouse.wheel(-550, 0);
+  await page.mouse.wheel(-distance, 0);
   await expectSlideSnap(page, 0);
   await page
     .getByRole("button", { name: "Fullscreen slides", exact: true })
     .click();
   await atCenter(page, track);
-  await page.mouse.wheel(650, 0);
+  await page.mouse.wheel((await track.boundingBox())!.width * 0.8, 0);
   await expectSlideSnap(page, 1);
   await assertFullscreen(page, ".slides-editor");
   await page.keyboard.press("Escape");
@@ -586,6 +592,7 @@ test("mobile fullscreen navigator opens by tap and moves between individually fo
     );
     await page.goto(baseURL!);
     await page.getByRole("button", { name: "Map: slide 2", exact: true }).tap();
+    await page.getByLabel("Slide note", { exact: true }).focus();
     await page
       .getByRole("button", { name: "Fullscreen slide note", exact: true })
       .tap();

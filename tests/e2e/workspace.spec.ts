@@ -183,7 +183,7 @@ test("Office opens a sortable list/icon folder browser with history, creation, a
       .getByRole("button", { name: "Open document: A report", exact: true })
       .click();
     await expect(page.locator(".document-name")).toHaveText("A report");
-    await expect(page.locator(".sidebar")).toBeVisible();
+    await expect(page.locator(".sidebar")).toHaveCount(0);
   } finally {
     await f.cleanup();
   }
@@ -208,9 +208,6 @@ test("mobile workspace browser navigates folders, switches views, and creates in
       .getByRole("button", { name: "1 person in this document", exact: true })
       .tap();
     await expect(page.getByRole("tooltip")).toContainText("In this document");
-    await page
-      .getByRole("button", { name: "Toggle sidebar", exact: true })
-      .tap();
     await page
       .getByRole("button", { name: "Open workspace", exact: true })
       .tap();

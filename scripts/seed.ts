@@ -29,12 +29,12 @@ paragraph(fragment, "Office", "heading", {
 });
 paragraph(
   fragment,
-  "Documents contain rich-text, canvas, slide, and spreadsheet blocks. Use the sidebar to organize documents into folders.",
+  "Documents contain rich-text, canvas, slide, and spreadsheet blocks. Open the workspace from the Office logo to organize documents into folders.",
 );
 paragraph(fragment, "Write and format text", "heading", { level: 2 });
 paragraph(
   fragment,
-  "Try # for a heading, **bold**, or a dash for a list. Formatting controls are on the left. Type /link to reference another document, block, or element.",
+  "Try # for a heading, **bold**, or a dash for a list. The header toolbar follows the editor in focus. Type /link to reference another document, block, or element.",
 );
 paragraph(fragment, "Navigate and edit blocks", "heading", { level: 2 });
 paragraph(
@@ -127,7 +127,7 @@ slides.push([title, content]);
 (content.get("title") as Y.Text).insert(0, "Content slide");
 paragraph(
   content.get("content"),
-  "Content slides can contain a rich-text note or a canvas. Change the layout and add slides with the controls on the left; navigate with the carousel or minimap.",
+  "Content slides can contain a rich-text note or a canvas. Change the layout in the slide bar and add slides from the header toolbar; navigate with the carousel or minimap.",
 );
 writeFileSync(
   new URL("../backend/internal/store/welcome.bin", import.meta.url),

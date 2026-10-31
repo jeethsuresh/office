@@ -28,6 +28,9 @@ test("desktop flow: folders, rich text, drawing, slide layouts, minimap, and ins
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
   await expect(page.getByText("All changes saved")).toBeVisible();
+  await page
+    .getByRole("button", { name: "Open workspace", exact: true })
+    .click();
   await page.getByRole("button", { name: "New folder", exact: true }).click();
   await page.getByLabel("Name", { exact: true }).fill(`Ideas ${Date.now()}`);
   await page.getByRole("button", { name: "Create", exact: true }).click();
@@ -80,7 +83,6 @@ test("desktop flow: folders, rich text, drawing, slide layouts, minimap, and ins
   await expect(page.locator(".block-canvas [data-shape-id]")).toHaveCount(1);
   await addBlock(page, "Slides");
   await page
-    .locator(".block-slides")
     .getByRole("button", { name: "Add content slide", exact: true })
     .click();
   await expect(page.locator(".slide-card")).toHaveCount(2);
@@ -246,19 +248,10 @@ test("mobile profile keeps navigation, editing, drawing, and horizontal slides u
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(
-    page.getByRole("button", { name: "Toggle sidebar", exact: true }),
-  ).toBeVisible();
   await expect(page.locator(".sidebar")).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Toggle sidebar", exact: true })
-    .click();
   await expect(
-    page.getByRole("navigation", { name: "Documents" }),
+    page.getByRole("button", { name: "Open workspace", exact: true }),
   ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Close sidebar", exact: true })
-    .click();
   await expect(page.getByLabel("Document text", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: /Go to canvas block/ }).click();
   await expect(page.locator(".block-canvas .drawing-surface")).toBeInViewport();

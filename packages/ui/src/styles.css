@@ -3731,3 +3731,179 @@ html, body, #root { width: 100%; height: 100%; min-width: 0; }
 .slides-workspace { position: relative; }
 .slide-swipe-strip { position: absolute; inset: 0 0 auto; height: 22px; z-index: 3; touch-action: none; }
 .slide-track { padding-top: 24px; }
+
+/* The workspace header owns the focused editor's tools. */
+.topbar {
+  padding-inline: 16px;
+  gap: 16px;
+}
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  padding: 5px 0;
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -1.5px;
+}
+.topbar .breadcrumb {
+  flex-shrink: 2;
+  max-width: 230px;
+}
+.topbar .document-name {
+  max-width: 150px;
+}
+.workspace-tools {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+}
+.workspace-tools:empty {
+  display: none;
+}
+.workspace-tools .header-editor-tools {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.header-editor-tools .tool-list {
+  flex-direction: row;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  gap: 3px;
+  padding: 6px 3px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.header-editor-tools .tool-list > * {
+  flex-shrink: 0;
+}
+.header-editor-tools .tool-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 6px;
+}
+.header-editor-tools .canvas-zoom {
+  width: 38px;
+}
+.header-editor-tools .color-palette {
+  margin-inline: 6px;
+}
+.header-editor-tools .rail-label {
+  margin: 0 6px 0 0;
+}
+.header-editor-tools .slide-layout-tool {
+  flex-direction: row;
+  align-items: center;
+  width: auto;
+}
+.minimap-fullscreen {
+  display: flex;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 12px;
+}
+
+/* Keep the attached window bars and navigation, and fill the remaining area. */
+.block-viewport {
+  --block-peek: 36px;
+  --block-gap: 4px;
+  padding: 0;
+}
+.block-editor,
+.block-boundary {
+  --navigation-rail: 0px;
+}
+.block-heading,
+.block-heading.is-previous,
+.block-body {
+  border-radius: 0;
+  box-shadow: none;
+}
+.block-body {
+  border-inline: 0;
+}
+.block-body > .doc-editor > .doc-paper > div > .prose {
+  max-width: none;
+}
+.block-body > .slides-editor > .slides-workspace > .slide-track {
+  padding: 24px 0 0;
+  scroll-padding-inline: 0;
+  gap: 0;
+}
+.block-body > .slides-editor > .slides-workspace > .slide-track::after {
+  flex-basis: 0;
+}
+.block-body > .slides-editor > .slides-workspace > .slide-track > .slide-card {
+  width: 100%;
+  min-width: 0;
+  border-inline: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+@media (max-width: 1100px) {
+  .topbar {
+    gap: 10px;
+    padding-inline: 10px;
+  }
+  .topbar .breadcrumb {
+    max-width: 150px;
+  }
+  .topbar .workspace-home-link,
+  .topbar .breadcrumb > svg {
+    display: none;
+  }
+  .topbar .sync-state {
+    font-size: 0;
+  }
+}
+@media (max-width: 760px) {
+  .topbar:has(.workspace-tools:not(:empty)) {
+    height: auto;
+    min-height: 92px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: 44px 44px;
+    column-gap: 10px;
+    row-gap: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+  .header-brand {
+    font-size: 22px;
+  }
+  .header-brand .brand-mark {
+    transform: scale(.8);
+  }
+  .topbar .breadcrumb {
+    max-width: none;
+  }
+  .topbar .document-name {
+    max-width: 100%;
+  }
+  .workspace-tools {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    border-top: 1px solid var(--line);
+    margin-inline: -10px;
+    padding-inline: 7px;
+  }
+  .topbar-right {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .header-editor-tools .tool-button {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    min-height: 36px;
+  }
+}
