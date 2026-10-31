@@ -218,6 +218,7 @@ app.whenReady().then(async () => {
   try {
     await createWindow();
   } catch (e) {
+    console.error("Office could not start", e);
     dialog.showErrorBox("Office could not start", String(e));
     app.quit();
   }

@@ -3,8 +3,11 @@ import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { readFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+import { createServer } from 'node:net';
+import { once } from 'node:events';
 const config = JSON.parse(await readFile('desktop-release.config.json', 'utf8'));
-const { _electron } = await import(config.slug === 'office' ? '@playwright/test' : 'playwright');
+const { chromium } = await import(config.slug === 'office' ? '@playwright/test' : 'playwright');
 const profile = await mkdtemp(path.join(os.tmpdir(), config.slug + '-native-'));
 let executable = path.resolve(process.argv[2]);
 if (process.platform === 'darwin') {
@@ -13,14 +16,51 @@ if (process.platform === 'darwin') {
   assert.equal(files.length, 1);
   executable = path.join(directory, files[0]);
 }
-const launch = () => _electron.launch({
-  executablePath: executable,
-  args: process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : [],
-  env: { ...process.env, ELECTRON_RUN_AS_NODE: '',
-    OFFICE_DATA: path.join(profile, 'workspace'), OFFICE_PROFILE: path.join(profile, 'profile'),
-    RSS_PROFILE: path.join(profile, 'profile') },
-  timeout: 60000,
-});
+const launch = async () => {
+  const reservation = createServer();
+  await new Promise(resolve => reservation.listen(0, '127.0.0.1', resolve));
+  const port = reservation.address().port;
+  await new Promise(resolve => reservation.close(resolve));
+  const env = { ...process.env, OFFICE_DATA: path.join(profile, 'workspace'),
+    OFFICE_PROFILE: path.join(profile, 'profile'), RSS_PROFILE: path.join(profile, 'profile'),
+    ELECTRON_ENABLE_LOGGING: '1' };
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.NODE_OPTIONS;
+  const child = spawn(executable, [`--remote-debugging-port=${port}`, '--remote-debugging-address=127.0.0.1',
+    ...(process.platform === 'linux' ? ['--no-sandbox', '--disable-dev-shm-usage'] : [])], {env, stdio: ['ignore', 'pipe', 'pipe']});
+  let logs = '';
+  for (const stream of [child.stdout, child.stderr]) stream.on('data', data => { logs = (logs + data).slice(-16000); });
+  let launchError;
+  child.once('error', error => { launchError = error; });
+  let browser;
+  try {
+    for (let attempt = 0; attempt < 120; attempt++) {
+      if (launchError || child.exitCode !== null) throw launchError ?? new Error('Native process exited: ' + logs);
+      try {
+        const response = await fetch(`http://127.0.0.1:${port}/json/version`);
+        if (response.ok) { browser = await chromium.connectOverCDP(`http://127.0.0.1:${port}`); break; }
+      } catch {}
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    if (!browser) throw new Error('Native browser did not start: ' + logs);
+    return {
+      firstWindow: async () => {
+        const context = browser.contexts()[0];
+        return context.pages()[0] ?? await context.waitForEvent('page', {timeout: 30000});
+      },
+      close: async () => {
+        await browser.close();
+        if (child.exitCode === null) {
+          await Promise.race([once(child, 'exit'), new Promise(resolve => setTimeout(resolve, 3000))]);
+          if (child.exitCode === null) child.kill();
+        }
+      },
+    };
+  } catch (error) {
+    child.kill();
+    throw error;
+  }
+};
 let app;
 try {
   app = await launch();
