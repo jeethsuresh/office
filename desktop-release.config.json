@@ -13,7 +13,7 @@
   "slug": "office",
   "repository": "jeethsuresh/office",
   "entries": {
-    "macos": "Office.app",
+    "macos": "office.app",
     "windows": "office.exe",
     "linux": "office"
   }
