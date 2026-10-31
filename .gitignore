@@ -11,3 +11,7 @@ playwright-report/
 .DS_Store
 .cache/
 .gravitas-runtime/
+
+desktop-dist/
+
+__pycache__/
