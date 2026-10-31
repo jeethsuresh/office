@@ -1,0 +1,20 @@
+{
+  "name": "Office",
+  "directory": "apps/desktop",
+  "engine": "electron",
+  "version": "0.1.0",
+  "versionCode": 1000,
+  "bunVersion": "1.4.0",
+  "changes": [
+    "Office is available as a native Electron app for macOS, Windows and Linux, with its Go workspace backend bundled for offline use.",
+    "Documents, canvases, slides and spreadsheets stay on your device across app updates. Install new versions from Private Store."
+  ],
+  "schemaVersion": 1,
+  "slug": "office",
+  "repository": "jeethsuresh/office",
+  "entries": {
+    "macos": "office.app",
+    "windows": "office.exe",
+    "linux": "office"
+  }
+}
