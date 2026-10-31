@@ -261,6 +261,7 @@ export function CanvasEditor({
     const element = svg.current;
     if (!element) return;
     const wheel = (event: WheelEvent) => {
+      if (readOnly) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.ctrlKey || event.metaKey) zoom(event.deltaY > 0 ? 1.06 : 0.94);
@@ -282,7 +283,7 @@ export function CanvasEditor({
     // React wheel listeners are passive; a native listener owns the gesture.
     element.addEventListener("wheel", wheel, { passive: false });
     return () => element.removeEventListener("wheel", wheel);
-  }, []);
+  }, [readOnly]);
   function point(event: { clientX: number; clientY: number }) {
     const element = svg.current!;
     const p = element.createSVGPoint();

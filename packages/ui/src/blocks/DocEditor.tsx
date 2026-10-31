@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useLayoutEffect } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Collaboration from "@tiptap/extension-collaboration";
@@ -91,6 +91,9 @@ export function DocEditor({
           const button =
             fullscreen.ref.current?.querySelector<HTMLButtonElement>(
               ".slash-command-list button",
+            ) ??
+            document.querySelector<HTMLButtonElement>(
+              "[data-office-portal] .slash-command-list button",
             );
           if (event.key === "Enter" && button) {
             button.click();
@@ -123,8 +126,12 @@ export function DocEditor({
         },
       },
     },
-    [fragment, session, readOnly],
+    [fragment, session],
   );
+  useLayoutEffect(() => {
+    editor?.setEditable(!readOnly, false);
+    if (readOnly) setSlash(null);
+  }, [editor, readOnly]);
   function updateSlash(current: NonNullable<typeof editor>) {
     if (readOnly || !current.state.selection.empty) {
       setSlash(null);

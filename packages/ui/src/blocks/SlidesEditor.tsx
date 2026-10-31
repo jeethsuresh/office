@@ -11,6 +11,7 @@ import {
   X,
   Maximize2,
   Link2,
+  MonitorOff,
 } from "lucide-react";
 import {
   addSlide,
@@ -26,6 +27,8 @@ import { useShared } from "../shared/hooks";
 import { ToolButton } from "../shared/Toolbar";
 import { BlockActions, downloadFile } from "../shared/BlockActions";
 import { slideLayouts } from "./slideLayouts";
+import { SlideViewport } from "./SlideViewport";
+import { useSlideshow } from "./useSlideshow";
 import { EditorTools, useEditorFullscreen } from "../shared/Fullscreen";
 import { useBlockTools } from "../shared/WorkspaceTools";
 import {
@@ -61,9 +64,16 @@ export function SlidesEditor({
   activeIndex.current = active;
   const reportActive = useRef(onActiveSlide);
   reportActive.current = onActiveSlide;
-  const [present, setPresent] = useState(false);
+  const workspace = useRef<HTMLDivElement>(null);
   const undo = useRef<Y.UndoManager | null>(null);
   const list = orderedSlides(block);
+  const slideshow = useSlideshow(workspace, active, list.length, (index) =>
+    go(index),
+  );
+  useEffect(() => {
+    if (slideshow.presenting && blockTools && !blockTools.active)
+      slideshow.close();
+  }, [slideshow.presenting, blockTools?.active, slideshow.close]);
   const selectedSlide = useRef<string | null>(null);
   if (!selectedSlide.current && list[active])
     selectedSlide.current = list[active].get("id");
@@ -221,16 +231,6 @@ export function SlidesEditor({
     if (active >= list.length) setActive(Math.max(0, list.length - 1));
     if (list[active]) onActiveSlide(list[active].get("id"));
   }, [list.length, active]);
-  useEffect(() => {
-    if (!present) return;
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setPresent(false);
-      if (e.key === "ArrowRight") go(active + 1);
-      if (e.key === "ArrowLeft") go(active - 1);
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  }, [present, active, list.length]);
   function add(layout: string) {
     undo.current?.stopCapturing();
     const slide = addSlide(block, layout);
@@ -244,9 +244,6 @@ export function SlidesEditor({
   useEffect(() => {
     setFocusedTool?.(`block:${block.get("id")}`);
   }, [slide?.get("id"), setFocusedTool, block]);
-  const Presentation = slide
-    ? (slideLayouts[slide.get("layout")] ?? slideLayouts.content).component
-    : null;
   return (
     <div
       ref={fullscreen.ref}
@@ -272,7 +269,7 @@ export function SlidesEditor({
         <ToolButton
           label="Present slides"
           disabled={!list.length}
-          onClick={() => setPresent(true)}
+          onClick={slideshow.start}
         >
           <Play size={17} />
         </ToolButton>
@@ -327,7 +324,12 @@ export function SlidesEditor({
         />
       </EditorTools>
       <div
-        className="slides-workspace"
+        ref={workspace}
+        className={`slides-workspace ${slideshow.presenting ? "presentation" : ""} ${slideshow.blank ? "is-blank" : ""}`}
+        role={slideshow.presenting ? "dialog" : undefined}
+        aria-modal={slideshow.presenting ? true : undefined}
+        aria-label={slideshow.presenting ? "Presentation" : undefined}
+        tabIndex={slideshow.presenting ? -1 : undefined}
         onPointerDown={(event) => {
           if (
             event.pointerType !== "touch" ||
@@ -370,6 +372,7 @@ export function SlidesEditor({
               index={index}
               current={index === active}
               block={block}
+              presenting={slideshow.presenting}
             />
           ))}
           {!list.length && (
@@ -422,50 +425,98 @@ export function SlidesEditor({
             </button>
           </nav>
         </div>
+        {slideshow.presenting && !!list.length && (
+          <>
+            <div className="presentation-topbar">
+              <span>{block.get("title") || "Presentation"}</span>
+              <button
+                className="icon-button presentation-close"
+                data-presentation-close
+                aria-label="Exit presentation"
+                title="Exit presentation (Escape)"
+                onClick={slideshow.close}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            {slideshow.blank && (
+              <button
+                className="presentation-blank"
+                onClick={slideshow.toggleBlank}
+              >
+                Screen is blank<span>Press B or click to show the slide</span>
+              </button>
+            )}
+            <div className="presentation-controls">
+              <div
+                className="presentation-navigation"
+                aria-label="Presentation controls"
+              >
+                <button
+                  className="icon-button"
+                  aria-label="Previous presented slide"
+                  title="Previous slide (← / Page Up)"
+                  disabled={active === 0}
+                  onClick={() => go(active - 1)}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <span
+                  className="presentation-count"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
+                  {active + 1} / {list.length}
+                </span>
+                <button
+                  className="icon-button"
+                  aria-label="Next presented slide"
+                  title="Next slide (→ / Space / Page Down)"
+                  disabled={active >= list.length - 1}
+                  onClick={() => go(active + 1)}
+                >
+                  <ArrowRight size={20} />
+                </button>
+                <span className="presentation-tools-divider" />
+                <button
+                  className="icon-button"
+                  aria-label="Blank screen"
+                  aria-pressed={slideshow.blank}
+                  title="Blank screen (B)"
+                  onClick={slideshow.toggleBlank}
+                >
+                  <MonitorOff size={19} />
+                </button>
+                {!slideshow.native &&
+                  !document.fullscreenElement &&
+                  document.fullscreenEnabled && (
+                    <button
+                      className="icon-button"
+                      aria-label="Fullscreen presentation"
+                      title="Fullscreen presentation"
+                      onClick={slideshow.fullscreen}
+                    >
+                      <Maximize2 size={18} />
+                    </button>
+                  )}
+              </div>
+              <div
+                className="presentation-progress"
+                role="progressbar"
+                aria-label="Slideshow progress"
+                aria-valuemin={1}
+                aria-valuemax={list.length}
+                aria-valuenow={active + 1}
+              >
+                <span
+                  style={{ width: `${((active + 1) / list.length) * 100}%` }}
+                />
+              </div>
+            </div>
+          </>
+        )}
       </div>
-      {present && slide && Presentation && (
-        <div
-          className="presentation"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Presentation"
-          tabIndex={-1}
-          ref={(el) => el?.focus()}
-        >
-          <button
-            className="presentation-close icon-button"
-            autoFocus
-            aria-label="Exit presentation"
-            onClick={() => setPresent(false)}
-          >
-            <X />
-          </button>
-          <div className="presented-slide">
-            <Presentation slide={slide} session={session} readOnly />
-          </div>
-          <div className="presentation-navigation">
-            <button
-              className="icon-button"
-              aria-label="Previous presented slide"
-              disabled={active === 0}
-              onClick={() => go(active - 1)}
-            >
-              <ArrowLeft />
-            </button>
-            <span>
-              {active + 1} / {list.length}
-            </span>
-            <button
-              className="icon-button"
-              aria-label="Next presented slide"
-              disabled={active === list.length - 1}
-              onClick={() => go(active + 1)}
-            >
-              <ArrowRight />
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -476,12 +527,14 @@ function SlideCard({
   index,
   current,
   block,
+  presenting,
 }: {
   slide: SharedRecord;
   session: DocumentSession;
   index: number;
   current: boolean;
   block: SharedRecord;
+  presenting: boolean;
 }) {
   useShared(slide);
   const fullscreen = useEditorFullscreen(`slide:${slide.get("id")}`);
@@ -512,7 +565,7 @@ function SlideCard({
   return (
     <div
       ref={fullscreen.ref}
-      className={`slide-card ${current ? "current" : ""} ${fullscreen.className}`}
+      className={`slide-card ${current ? "current" : ""} ${presenting && current ? "presented-slide" : ""} ${fullscreen.className}`}
       data-slide-id={slide.get("id")}
       inert={!current}
     >
@@ -583,6 +636,25 @@ function SlideCard({
           >
             <Link2 size={14} />
           </button>
+          {slide.get("layout") === "content" && (
+            <div
+              className="slide-content-switch"
+              aria-label="Slide content type"
+            >
+              <button
+                aria-pressed={slide.get("contentKind") === "doc"}
+                onClick={() => slide.set("contentKind", "doc")}
+              >
+                Note
+              </button>
+              <button
+                aria-pressed={slide.get("contentKind") === "canvas"}
+                onClick={() => slide.set("contentKind", "canvas")}
+              >
+                Canvas
+              </button>
+            </div>
+          )}
           {!fullscreen.active && picker}
           <button
             className="icon-button fullscreen-enter"
@@ -594,7 +666,9 @@ function SlideCard({
           </button>
         </div>
       </div>
-      <Component slide={slide} session={session} />
+      <SlideViewport>
+        <Component slide={slide} session={session} readOnly={presenting} />
+      </SlideViewport>
       {!!slide.get("links")?.size && (
         <div className="slide-reference-list">
           {[...(slide.get("links") as Y.Map<string>).entries()].map(
