@@ -191,8 +191,8 @@ test("fullscreen keeps mounted note/canvas state, supports slide/deck/content, X
   );
   await page.getByRole("button", { name: "Canvas", exact: true }).click();
   await page
+    .locator(".office-block.is-active .slide-content-body")
     .getByLabel("Drawing workspace", { exact: true })
-    .filter({ visible: true })
     .focus();
   await page
     .getByRole("button", { name: "Fullscreen slide canvas", exact: true })
