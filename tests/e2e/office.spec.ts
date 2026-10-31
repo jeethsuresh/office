@@ -83,7 +83,6 @@ test("desktop flow: folders, rich text, drawing, slide layouts, minimap, and ins
   await expect(page.locator(".block-canvas [data-shape-id]")).toHaveCount(1);
   await addBlock(page, "Slides");
   await page
-    .locator(".block-slides")
     .getByRole("button", { name: "Add content slide", exact: true })
     .click();
   await expect(page.locator(".slide-card")).toHaveCount(2);
