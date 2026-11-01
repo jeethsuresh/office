@@ -21,6 +21,7 @@ import { DocumentView } from "./shell/DocumentView";
 import { WorkspaceDialog, type WorkspaceAction } from "./shell/WorkspaceDialog";
 import { WorkspaceBrowser } from "./shell/WorkspaceBrowser";
 import { Presence } from "./shell/Presence";
+import { AccountAvatar, type AccountProfile } from "./shell/AccountAvatar";
 import { OfficeDataProvider } from "./shared/OfficeData";
 const empty: Workspace = { id: "", folders: [], documents: [] };
 type Route =
@@ -121,7 +122,7 @@ function ConnectedDocument({
     </OfficeDataProvider>
   );
 }
-export function App(props: { storageNamespace?: string }) {
+export function App(props: { storageNamespace?: string; account?: AccountProfile }) {
   return (
     <WorkspaceToolsProvider>
       <OfficeApp {...props} />
@@ -130,8 +131,10 @@ export function App(props: { storageNamespace?: string }) {
 }
 function OfficeApp({
   storageNamespace = "local",
+  account,
 }: {
   storageNamespace?: string;
+  account?: AccountProfile;
 }) {
   const api = useMemo(() => new WorkspaceAPI(), []);
   const workspaceKey =
@@ -315,6 +318,7 @@ function OfficeApp({
             {document && session && (
               <SessionHeader session={session} onShare={() => setShare(true)} />
             )}
+            {account && <AccountAvatar account={account} />}
             {route.view === "document" && (
               <button
                 className="icon-button"

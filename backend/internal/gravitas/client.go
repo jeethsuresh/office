@@ -38,9 +38,11 @@ func HasSharedSignInHint(r *http.Request) bool {
 type Identity struct {
 	Issuer   string `json:"issuer"`
 	Subject  string `json:"sub"`
-	Username string `json:"username"`
+	Username string `json:"username,omitempty"`
+	Name     string `json:"name"`
+	Picture  string `json:"picture,omitempty"`
 	Domain   string `json:"domain"`
-	UserID   string `json:"user_id"`
+	UserID   string `json:"user_id,omitempty"`
 }
 type metadata struct {
 	Issuer       string `json:"issuer"`
@@ -225,7 +227,7 @@ func (c *Client) Start(w http.ResponseWriter, r *http.Request, register bool) er
 		return err
 	}
 	h := sha256.Sum256([]byte(f.Verifier))
-	q := url.Values{"callerURL": {c.AppURL}, "redirectURL": {c.AppURL + "/auth/gravitas/callback"}, "codeChallenge": {base64.RawURLEncoding.EncodeToString(h[:])}, "codeChallengeMethod": {"S256"}, "scope": {"profile.name"}, "state": {f.State}}
+	q := url.Values{"callerURL": {c.AppURL}, "redirectURL": {c.AppURL + "/auth/gravitas/callback"}, "codeChallenge": {base64.RawURLEncoding.EncodeToString(h[:])}, "codeChallengeMethod": {"S256"}, "scope": {"profile.name profile.picture"}, "state": {f.State}}
 	if register {
 		q.Set("screen", "register")
 	}
@@ -301,11 +303,21 @@ func (c *Client) Callback(w http.ResponseWriter, r *http.Request) (Authorization
 	if err = c.getJSON(m.Profile, tokens.AccessToken, &identity.Identity); err != nil {
 		return identity, "", err
 	}
-	if identity.Subject == "" || len(identity.Subject) > 256 || identity.Username == "" || identity.Domain != m.Domain || identity.UserID != "@"+identity.Username+":"+m.Domain {
+	if identity.Subject == "" || len(identity.Subject) > 256 || identity.Domain != m.Domain || (identity.UserID != "" && identity.UserID != "@"+identity.Username+":"+m.Domain) {
 		return Authorization{}, "", errors.New("invalid IAM identity")
 	}
-	if f.Username != "" && identity.UserID != f.Username {
+	if f.Username != "" && identity.UserID != "" && identity.UserID != f.Username {
 		return Authorization{}, "", ErrLoginRequired
+	}
+	if identity.Picture != "" {
+		pictureURL, parseErr := url.Parse(identity.Picture)
+		issuerURL, _ := url.Parse(c.Issuer)
+		if parseErr != nil || pictureURL.Scheme != "https" || pictureURL.Host != issuerURL.Host || pictureURL.User != nil || pictureURL.RawQuery != "" || pictureURL.Fragment != "" || !strings.HasPrefix(pictureURL.Path, "/profile/pictures/") || len(identity.Picture) > 512 {
+			identity.Picture = ""
+		}
+	}
+	if len(identity.Name) > 480 {
+		return Authorization{}, "", errors.New("invalid IAM name")
 	}
 	identity.Issuer = c.Issuer
 	if tokens.CheckTTL <= 0 || tokens.CheckTTL > int64(MaxFamilyLifetime/time.Second) {

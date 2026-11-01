@@ -39,7 +39,11 @@ func fixture(t *testing.T) (*Client, *atomic.Int32) {
 			return
 		}
 		u, _ := url.Parse(issuer)
-		_ = json.NewEncoder(w).Encode(Identity{Subject: "stable-subject", Username: "alice", Domain: u.Hostname(), UserID: "@alice:" + u.Hostname()})
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "stable-subject", Name: "Alice Example", Domain: u.Hostname(), Picture: issuer + "/profile/pictures/11111111-1111-4111-8111-111111111111"})
+	})
+	mux.HandleFunc("GET /profile/pictures/{key}", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write([]byte{137, 80, 78, 71, 13, 10, 26, 10})
 	})
 	mux.HandleFunc("GET /oauth/session", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer "+checkToken {
@@ -83,7 +87,7 @@ func start(t *testing.T, c *Client) (flow, *http.Cookie, *httptest.ResponseRecor
 	}
 	sum := sha256.Sum256([]byte(f.Verifier))
 	q := location.Query()
-	if q.Get("codeChallenge") != base64.RawURLEncoding.EncodeToString(sum[:]) || q.Get("codeChallengeMethod") != "S256" || q.Get("scope") != "profile.name" || q.Get("state") != f.State || q.Get("redirectURL") != c.AppURL+"/auth/gravitas/callback" {
+	if q.Get("codeChallenge") != base64.RawURLEncoding.EncodeToString(sum[:]) || q.Get("codeChallengeMethod") != "S256" || q.Get("scope") != "profile.name profile.picture" || q.Get("state") != f.State || q.Get("redirectURL") != c.AppURL+"/auth/gravitas/callback" {
 		t.Fatal("invalid PKCE request")
 	}
 	if strings.Contains(location.String(), f.Verifier) {

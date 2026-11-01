@@ -2,12 +2,11 @@
   "name": "Office",
   "directory": "apps/desktop",
   "engine": "electron",
-  "version": "0.1.0",
-  "versionCode": 1000,
+  "version": "0.1.1",
+  "versionCode": 1001,
   "bunVersion": "1.4.0",
   "changes": [
-    "Office is available as a native Electron app for macOS, Windows and Linux, with its Go workspace backend bundled for offline use.",
-    "Documents, canvases, slides and spreadsheets stay on your device across app updates. Install new versions from Private Store."
+    "Show your Gravitas profile picture or full-name initials beside Share when signed in."
   ],
   "schemaVersion": 1,
   "slug": "office",
