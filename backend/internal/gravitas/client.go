@@ -316,9 +316,6 @@ func (c *Client) Callback(w http.ResponseWriter, r *http.Request) (Authorization
 			identity.Picture = ""
 		}
 	}
-	if len(identity.Name) > 480 {
-		return Authorization{}, "", errors.New("invalid IAM name")
-	}
 	identity.Issuer = c.Issuer
 	if tokens.CheckTTL <= 0 || tokens.CheckTTL > int64(MaxFamilyLifetime/time.Second) {
 		return Authorization{}, "", errors.New("invalid IAM session binding")

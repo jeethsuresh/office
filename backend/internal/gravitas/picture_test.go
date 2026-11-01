@@ -2,8 +2,11 @@ package gravitas
 
 import (
 	"context"
+	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -57,5 +60,29 @@ func TestPictureRejectsOtherOriginsAndInvalidImageResponses(t *testing.T) {
 				t.Fatal("invalid image response accepted")
 			}
 		})
+	}
+}
+
+func TestValidUnicodeFullNameWithoutUsername(t *testing.T) {
+	c, _ := fixture(t)
+	original := c.HTTP.Transport
+	name := strings.Repeat("कि", 120)
+	c.HTTP.Transport = sessionRoundTrip(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/app/v1/me" {
+			issuer, _ := url.Parse(c.Issuer)
+			body, _ := json.Marshal(Identity{Subject: "stable-subject", Name: name, Domain: issuer.Hostname()})
+			return &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(string(body))), Header: make(http.Header)}, nil
+		}
+		return original.RoundTrip(r)
+	})
+	f, cookie, _ := start(t, c)
+	r := httptest.NewRequest("GET", c.AppURL+"/auth/gravitas/callback?code=one-use-code&state="+f.State, nil)
+	r.AddCookie(cookie)
+	auth, _, err := c.Callback(httptest.NewRecorder(), r)
+	if err != nil || auth.Name != name {
+		t.Fatalf("valid full name rejected: %v", err)
+	}
+	if err = c.SetSession(httptest.NewRecorder(), auth); err != nil {
+		t.Fatal(err)
 	}
 }
