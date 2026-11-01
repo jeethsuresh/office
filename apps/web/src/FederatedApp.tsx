@@ -7,7 +7,7 @@ import { appReturnPath, automaticSignInURL } from "./automaticSignIn";
 import { createSessionMonitor } from "./sessionMonitor";
 import "./auth.css";
 
-type User = { issuer: string; sub: string; user_id: string; username: string };
+type User = { issuer: string; sub: string; name?: string; picture?: string };
 export function FederatedApp() {
   const [user, setUser] = useState<User | null>(null);
   const [local, setLocal] = useState(false);
@@ -98,5 +98,5 @@ export function FederatedApp() {
       userRef.current = null; setUser(null);
     } catch { setError("Sign-out failed. Please try again."); }
   };
-  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.user_id}</span><span role="status">{error}</span><DeviceFeatures /><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={`${user.issuer}|${user.sub}`} storageNamespace={`${user.issuer}|${user.sub}`} /></div></div>;
+  return <div className="office-signed-in"><div className="office-session-bar"><span>{user.name || "Signed in"}</span><span role="status">{error}</span><DeviceFeatures /><button type="button" onClick={() => void logout()}>Sign out of Office</button></div><div className="office-workspace"><App key={`${user.issuer}|${user.sub}`} storageNamespace={`${user.issuer}|${user.sub}`} account={user} /></div></div>;
 }

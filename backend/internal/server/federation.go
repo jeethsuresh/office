@@ -85,7 +85,26 @@ func (s *Server) federated(next http.Handler) http.Handler {
 				s.federationError(w, err)
 				return
 			}
+			if identity.Picture != "" {
+				identity.Picture = "/auth/gravitas/picture"
+			}
 			respond(w, 200, map[string]any{"user": identity})
+		})
+		mux.HandleFunc("GET /auth/gravitas/picture", func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Cache-Control", "no-store")
+			identity, err := c.Session(r)
+			if err != nil {
+				s.federationError(w, err)
+				return
+			}
+			data, kind, err := c.Picture(r.Context(), identity)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", kind)
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			_, _ = w.Write(data)
 		})
 		mux.HandleFunc("POST /auth/gravitas/logout", func(w http.ResponseWriter, r *http.Request) {
 			if !c.ValidMutation(r) {
