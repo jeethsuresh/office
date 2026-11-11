@@ -4,7 +4,7 @@
   "namespace": "office",
   "host": "work.gravitas.cool",
   "health_path": "/api/session-readyz",
-  "image_repository": "ghcr.io/jeethsuresh/office",
+  "image_repository": "ghcr.io/jeethsuresh/office-private",
   "release": {
     "command": [
       "bash",

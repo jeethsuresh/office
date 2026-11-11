@@ -58,10 +58,13 @@
                 "type": "RuntimeDefault"
               }
             },
+            "imagePullSecrets": [
+              {"name": "gravitas-ghcr"}
+            ],
             "containers": [
               {
                 "name": "office",
-                "image": "ghcr.io/jeethsuresh/office:bootstrap",
+                "image": "ghcr.io/jeethsuresh/office-private:bootstrap",
                 "ports": [
                   {
                     "name": "http",
