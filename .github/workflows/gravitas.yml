@@ -39,7 +39,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ghcr.io/jeethsuresh/office:${{ github.sha }}
+          tags: ghcr.io/jeethsuresh/office-private:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
   deploy:
@@ -66,7 +66,7 @@ jobs:
         uses: ./.gravitas-runtime
         with:
           config: .gravitas/deploy.json
-          image: ghcr.io/jeethsuresh/office@${{ needs.image.outputs.digest }}
+          image: ghcr.io/jeethsuresh/office-private@${{ needs.image.outputs.digest }}
           kubeconfig: ${{ secrets.GRAVITAS_KUBECONFIG }}
 
   desktop:
