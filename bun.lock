@@ -19,7 +19,7 @@
     },
     "apps/desktop": {
       "name": "@office/desktop",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "devDependencies": {
         "electron": "^37.2.0",
         "electron-builder": "^26.0.0",
