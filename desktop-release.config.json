@@ -2,11 +2,11 @@
   "name": "Office",
   "directory": "apps/desktop",
   "engine": "electron",
-  "version": "0.1.1",
-  "versionCode": 1001,
+  "version": "0.1.2",
+  "versionCode": 1002,
   "bunVersion": "1.4.0",
   "changes": [
-    "Show your Gravitas profile picture or full-name initials beside Share when signed in."
+    "Office for macOS is signed with Developer ID and notarized by Apple on Apple Silicon and Intel."
   ],
   "schemaVersion": 1,
   "slug": "office",
