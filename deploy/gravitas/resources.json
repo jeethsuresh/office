@@ -149,6 +149,16 @@
                     "value": "https://work.gravitas.cool"
                   },
                   {
+                    "name": "STORE_CATALOG_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "office-runtime",
+                        "key": "STORE_CATALOG_KEY",
+                        "optional": true
+                      }
+                    }
+                  },
+                  {
                     "name": "GRAVITAS_SESSION_KEY",
                     "valueFrom": {
                       "secretKeyRef": {

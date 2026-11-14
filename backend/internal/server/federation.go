@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"office/backend/internal/gravitas"
+	"office/backend/internal/storecatalog"
 	"strings"
 )
 
@@ -76,6 +77,7 @@ func (s *Server) federated(next http.Handler) http.Handler {
 				fail(w, 500, errors.New("Unable to create Office session"))
 				return
 			}
+			storecatalog.Register(r.Context(), identity.Issuer, identity.CheckToken)
 			http.Redirect(w, r, gravitas.SafeNext(back), http.StatusSeeOther)
 		})
 		mux.HandleFunc("GET /auth/gravitas/session", func(w http.ResponseWriter, r *http.Request) {
