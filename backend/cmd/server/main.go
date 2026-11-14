@@ -11,6 +11,7 @@ import (
 	"office/backend/internal/push"
 	"office/backend/internal/server"
 	"office/backend/internal/store"
+	"office/backend/internal/storecatalog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -48,6 +49,7 @@ func main() {
 	defer stopPush()
 	handler := svc.Handler()
 	go publisher.Run(pushContext)
+	go storecatalog.Run(pushContext)
 	ln, e := net.Listen("tcp", *listen)
 	if e != nil {
 		log.Fatal(e)
