@@ -13,6 +13,7 @@ import (
 	"office/backend/internal/store"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -30,7 +31,9 @@ func TestPushSubscriptionReceivesClosedAppCollaboratorRound(t *testing.T) {
 		t.Fatal(e)
 	}
 	now := time.Now()
-	publisher.Now = func() time.Time { return now }
+	var clock atomic.Int64
+	clock.Store(now.UnixNano())
+	publisher.Now = func() time.Time { return time.Unix(0, clock.Load()) }
 	svc := New(st, "", "")
 	svc.Push = publisher
 	server := httptest.NewServer(svc.Handler())
@@ -82,13 +85,22 @@ func TestPushSubscriptionReceivesClosedAppCollaboratorRound(t *testing.T) {
 	if frame(t, c)[0] != Ack {
 		t.Fatal("edit did not persist")
 	}
+	// The acknowledgement may be written before the handler enqueues the
+	// notification. Acquire the same room lock before advancing the clock.
+	svc.mu.Lock()
+	room := svc.rooms[doc.ID]
+	svc.mu.Unlock()
+	room.mu.Lock()
+	room.mu.Unlock()
 	_ = c.Close() // no open recipient page or socket required
 	now = now.Add(9 * time.Minute)
+	clock.Store(now.UnixNano())
 	publisher.Dispatch(context.Background(), now)
 	if calls != 0 {
 		t.Fatal("notified before quiet period")
 	}
 	now = now.Add(time.Minute)
+	clock.Store(now.UnixNano())
 	publisher.Dispatch(context.Background(), now)
 	if calls != 1 {
 		t.Fatal("closed-app collaborator round did not notify")
@@ -106,6 +118,7 @@ func TestPushSubscriptionReceivesClosedAppCollaboratorRound(t *testing.T) {
 	}
 	svc.notifyActivity(httptest.NewRequest("POST", "/", nil), doc.ID)
 	now = now.Add(10 * time.Minute)
+	clock.Store(now.UnixNano())
 	publisher.Dispatch(context.Background(), now)
 	if calls != 1 {
 		t.Fatal("unsubscribed device was notified")
