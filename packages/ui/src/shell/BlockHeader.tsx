@@ -62,7 +62,7 @@ export function BlockHeader({
       >
         <Icon size={15} />
       </span>
-      <span className="block-sequence">
+      <span className="sr-only">
         {String(index + 1).padStart(2, "0")} <i>/</i>{" "}
         {String(count).padStart(2, "0")}
       </span>
