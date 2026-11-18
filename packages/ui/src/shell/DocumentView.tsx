@@ -158,7 +158,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                 <PenTool />
                 <Layout />
               </div>
-              <h1>Empty document</h1>
               <button
                 className="primary-button"
                 onClick={() => openInsert("start")}
@@ -349,7 +348,6 @@ export function DocumentView({ session }: { session: DocumentSession }) {
                     </span>
                     <strong>{meta.name}</strong>
                     <span>{meta.description}</span>
-                    <Plus size={17} />
                   </button>
                 );
               })}
